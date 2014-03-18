@@ -3132,7 +3132,7 @@ int exynos_camera_picture_thread_start(struct exynos_camera *exynos_camera)
 
 	if (exynos_camera->picture_thread_enabled) {
 		ALOGE("Picture thread was already started!");
-		return -1;
+		return 0;
 	}
 
 	if (exynos_camera->camera_picture_format)
@@ -4190,6 +4190,12 @@ int exynos_camera_cancel_picture(struct camera_device *dev)
 		return -EINVAL;
 
 	exynos_camera = (struct exynos_camera *) dev->priv;
+
+	if (exynos_camera->picture_thread_running
+			|| exynos_camera->auto_focus_thread_enabled)
+	{
+		return 0;
+	}
 
 	exynos_camera->callback_lock = 1;
 	exynos_camera_picture_thread_stop(exynos_camera);
