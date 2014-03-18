@@ -79,7 +79,7 @@ int exynos_v4l2_fd(struct exynos_camera *exynos_camera, int exynos_v4l2_id)
 
 	index = exynos_v4l2_index(exynos_camera, exynos_v4l2_id);
 	if (index < 0) {
-		LOGE("%s: Unable to get v4l2 index for id %d", __func__, exynos_v4l2_id);
+		ALOGE("%s: Unable to get v4l2 index for id %d", __func__, exynos_v4l2_id);
 		return -1;
 	}
 
@@ -98,14 +98,14 @@ int exynos_v4l2_open(struct exynos_camera *exynos_camera, int exynos_v4l2_id)
 
 	index = exynos_v4l2_index(exynos_camera, exynos_v4l2_id);
 	if (index < 0) {
-		LOGE("%s: Unable to get v4l2 node for id %d", __func__, exynos_v4l2_id);
+		ALOGE("%s: Unable to get v4l2 node for id %d", __func__, exynos_v4l2_id);
 		return -1;
 	}
 
 	node = exynos_camera->config->v4l2_nodes[index].node;
 	fd = open(node, O_RDWR);
 	if (fd < 0) {
-		LOGE("%s: Unable to open v4l2 node for id %d", __func__, exynos_v4l2_id);
+		ALOGE("%s: Unable to open v4l2 node for id %d", __func__, exynos_v4l2_id);
 		return -1;
 	}
 
@@ -124,7 +124,7 @@ void exynos_v4l2_close(struct exynos_camera *exynos_camera, int exynos_v4l2_id)
 
 	index = exynos_v4l2_index(exynos_camera, exynos_v4l2_id);
 	if (index < 0) {
-		LOGE("%s: Unable to get v4l2 node for id %d", __func__, exynos_v4l2_id);
+		ALOGE("%s: Unable to get v4l2 node for id %d", __func__, exynos_v4l2_id);
 		return;
 	}
 
@@ -144,7 +144,7 @@ int exynos_v4l2_ioctl(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
 
 	fd = exynos_v4l2_fd(exynos_camera, exynos_v4l2_id);
 	if (fd < 0) {
-		LOGE("%s: Unable to get v4l2 fd for id %d", __func__, exynos_v4l2_id);
+		ALOGE("%s: Unable to get v4l2 fd for id %d", __func__, exynos_v4l2_id);
 		return -1;
 	}
 
@@ -162,7 +162,7 @@ int exynos_v4l2_poll(struct exynos_camera *exynos_camera, int exynos_v4l2_id)
 
 	fd = exynos_v4l2_fd(exynos_camera, exynos_v4l2_id);
 	if (fd < 0) {
-		LOGE("%s: Unable to get v4l2 fd for id %d", __func__, exynos_v4l2_id);
+		ALOGE("%s: Unable to get v4l2 fd for id %d", __func__, exynos_v4l2_id);
 		return -1;
 	}
 

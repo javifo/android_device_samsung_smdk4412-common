@@ -53,7 +53,7 @@ int exynos_param_register(struct exynos_camera *exynos_camera, char *key,
 			param->data.string = strdup(data.string);
 			break;
 		default:
-			LOGE("%s: Invalid type", __func__);
+			ALOGE("%s: Invalid type", __func__);
 			goto error;
 	}
 	param->type = type;
@@ -159,7 +159,7 @@ int exynos_param_data_set(struct exynos_camera *exynos_camera, char *key,
 	}
 
 	if (param->type != type)
-		LOGE("%s: Mismatching types for key %s", __func__, key);
+		ALOGE("%s: Mismatching types for key %s", __func__, key);
 
 	if (param->type == EXYNOS_PARAM_STRING && param->data.string != NULL)
 		free(param->data.string);
@@ -175,7 +175,7 @@ int exynos_param_data_set(struct exynos_camera *exynos_camera, char *key,
 			param->data.string = strdup(data.string);
 			break;
 		default:
-			LOGE("%s: Invalid type", __func__);
+			ALOGE("%s: Invalid type", __func__);
 			return -1;
 	}
 	param->type = type;
@@ -211,7 +211,7 @@ int exynos_param_int_get(struct exynos_camera *exynos_camera,
 
 	rc = exynos_param_data_get(exynos_camera, key, &data, EXYNOS_PARAM_INT);
 	if (rc < 0) {
-		LOGE("%s: Unable to get data for key %s", __func__, key);
+		ALOGE("%s: Unable to get data for key %s", __func__, key);
 		return -1;
 	}
 
@@ -229,7 +229,7 @@ float exynos_param_float_get(struct exynos_camera *exynos_camera,
 
 	rc = exynos_param_data_get(exynos_camera, key, &data, EXYNOS_PARAM_FLOAT);
 	if (rc < 0) {
-		LOGE("%s: Unable to get data for key %s", __func__, key);
+		ALOGE("%s: Unable to get data for key %s", __func__, key);
 		return -1;
 	}
 
@@ -247,7 +247,7 @@ char *exynos_param_string_get(struct exynos_camera *exynos_camera,
 
 	rc = exynos_param_data_get(exynos_camera, key, &data, EXYNOS_PARAM_STRING);
 	if (rc < 0) {
-		LOGE("%s: Unable to get data for key %s", __func__, key);
+		ALOGE("%s: Unable to get data for key %s", __func__, key);
 		return NULL;
 	}
 
@@ -267,7 +267,7 @@ int exynos_param_int_set(struct exynos_camera *exynos_camera,
 
 	rc = exynos_param_data_set(exynos_camera, key, data, EXYNOS_PARAM_INT);
 	if (rc < 0) {
-		LOGE("%s: Unable to set data for key %s", __func__, key);
+		ALOGE("%s: Unable to set data for key %s", __func__, key);
 		return -1;
 	}
 
@@ -287,7 +287,7 @@ int exynos_param_float_set(struct exynos_camera *exynos_camera,
 
 	rc = exynos_param_data_set(exynos_camera, key, data, EXYNOS_PARAM_FLOAT);
 	if (rc < 0) {
-		LOGE("%s: Unable to set data for key %s", __func__, key);
+		ALOGE("%s: Unable to set data for key %s", __func__, key);
 		return -1;
 	}
 
@@ -307,7 +307,7 @@ int exynos_param_string_set(struct exynos_camera *exynos_camera,
 
 	rc = exynos_param_data_set(exynos_camera, key, data, EXYNOS_PARAM_STRING);
 	if (rc < 0) {
-		LOGE("%s: Unable to set data for key %s", __func__, key);
+		ALOGE("%s: Unable to set data for key %s", __func__, key);
 		return -1;
 	}
 
@@ -344,7 +344,7 @@ char *exynos_params_string_get(struct exynos_camera *exynos_camera)
 				length += strlen(param->data.string);
 				break;
 			default:
-				LOGE("%s: Invalid type", __func__);
+				ALOGE("%s: Invalid type", __func__);
 				return NULL;
 		}
 
@@ -383,7 +383,7 @@ list_continue_length:
 				s += l;
 				break;
 			default:
-				LOGE("%s: Invalid type", __func__);
+				ALOGE("%s: Invalid type", __func__);
 				return NULL;
 		}
 
@@ -463,13 +463,13 @@ int exynos_params_string_set(struct exynos_camera *exynos_camera, char *string)
 				data.string = value;
 				break;
 			default:
-				LOGE("%s: Invalid type", __func__);
+				ALOGE("%s: Invalid type", __func__);
 				goto error;
 		}
 
 		rc = exynos_param_data_set(exynos_camera, key, data, type);
 		if (rc < 0) {
-			LOGE("%s: Unable to set data for key %s", __func__, key);
+			ALOGE("%s: Unable to set data for key %s", __func__, key);
 			goto error;
 		}
 

@@ -24,7 +24,7 @@
 
 #include <linux/ion.h>
 
-#define LOG_TAG "exynos_ion"
+#define ALOG_TAG "exynos_ion"
 #include <utils/Log.h>
 
 #include "exynos_camera.h"
@@ -42,7 +42,7 @@ int exynos_ion_open(struct exynos_camera *exynos_camera)
 
 	fd = open("/dev/ion", O_RDWR);
 	if (fd < 0) {
-		LOGE("%s: Unable to open ion device", __func__);
+		ALOGE("%s: Unable to open ion device", __func__);
 		return -1;
 	}
 

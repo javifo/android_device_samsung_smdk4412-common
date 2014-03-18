@@ -51,10 +51,10 @@ int exynos_jpeg_start(struct exynos_camera *exynos_camera,
 	if (exynos_camera == NULL || jpeg == NULL)
 		return -EINVAL;
 
-	LOGD("%s()", __func__);
+	ALOGD("%s()", __func__);
 
 	if (jpeg->enabled) {
-		LOGE("Jpeg was already started");
+		ALOGE("Jpeg was already started");
 		return -1;
 	}
 
@@ -68,7 +68,7 @@ int exynos_jpeg_start(struct exynos_camera *exynos_camera,
 
 	fd = jpeghal_enc_init();
 	if (fd < 0) {
-		LOGE("%s: Unable to init jpeg encoder", __func__);
+		ALOGE("%s: Unable to init jpeg encoder", __func__);
 		goto error;
 	}
 
@@ -93,13 +93,13 @@ int exynos_jpeg_start(struct exynos_camera *exynos_camera,
 
 	rc = jpeghal_enc_setconfig(fd, &config);
 	if (rc < 0) {
-		LOGE("%s: Unable to set jpeg config", __func__);
+		ALOGE("%s: Unable to set jpeg config", __func__);
 		goto error;
 	}
 
 	rc = jpeghal_s_ctrl(fd, V4L2_CID_CACHEABLE, 1);
 	if (rc < 0) {
-		LOGE("%s: Unable to set cacheable control", __func__);
+		ALOGE("%s: Unable to set cacheable control", __func__);
 		goto error;
 	}
 
@@ -121,7 +121,7 @@ int exynos_jpeg_start(struct exynos_camera *exynos_camera,
 
 		memory_ion_fd = exynos_ion_alloc(exynos_camera, buffer_in->length[0]);
 		if (memory_ion_fd < 0) {
-			LOGE("%s: Unable to alloc input ION memory", __func__);
+			ALOGE("%s: Unable to alloc input ION memory", __func__);
 			goto error;
 		}
 
@@ -130,11 +130,11 @@ int exynos_jpeg_start(struct exynos_camera *exynos_camera,
 		if (EXYNOS_CAMERA_CALLBACK_DEFINED(request_memory)) {
 			memory = exynos_camera->callbacks.request_memory(memory_ion_fd, buffer_in->length[0], 1, exynos_camera->callbacks.user);
 			if (memory == NULL || memory->data == NULL || memory->data == MAP_FAILED) {
-				LOGE("%s: Unable to request memory", __func__);
+				ALOGE("%s: Unable to request memory", __func__);
 				goto error;
 			}
 		} else {
-			LOGE("%s: No memory request function!", __func__);
+			ALOGE("%s: No memory request function!", __func__);
 			goto error;
 		}
 
@@ -145,7 +145,7 @@ int exynos_jpeg_start(struct exynos_camera *exynos_camera,
 
 		rc = jpeghal_set_inbuf(fd, buffer_in);
 		if (rc < 0) {
-			LOGE("%s: Unable to set input buffer", __func__);
+			ALOGE("%s: Unable to set input buffer", __func__);
 			goto error;
 		}
 
@@ -156,7 +156,7 @@ int exynos_jpeg_start(struct exynos_camera *exynos_camera,
 
 		memory_ion_fd = exynos_ion_alloc(exynos_camera, buffer_out->length[0]);
 		if (memory_ion_fd < 0) {
-			LOGE("%s: Unable to alloc output ION memory", __func__);
+			ALOGE("%s: Unable to alloc output ION memory", __func__);
 			goto error;
 		}
 
@@ -165,11 +165,11 @@ int exynos_jpeg_start(struct exynos_camera *exynos_camera,
 		if (EXYNOS_CAMERA_CALLBACK_DEFINED(request_memory)) {
 			memory = exynos_camera->callbacks.request_memory(memory_ion_fd, buffer_out->length[0], 1, exynos_camera->callbacks.user);
 			if (memory == NULL || memory->data == NULL || memory->data == MAP_FAILED) {
-				LOGE("%s: Unable to request memory", __func__);
+				ALOGE("%s: Unable to request memory", __func__);
 				goto error;
 			}
 		} else {
-			LOGE("%s: No memory request function!", __func__);
+			ALOGE("%s: No memory request function!", __func__);
 			goto error;
 		}
 
@@ -178,7 +178,7 @@ int exynos_jpeg_start(struct exynos_camera *exynos_camera,
 		jpeg->memory_out_ion_fd = memory_ion_fd;
 		buffer_out->start[0] = (void *) address;
 #else
-		LOGE("%s: Unable to set input buffer", __func__);
+		ALOGE("%s: Unable to set input buffer", __func__);
 		goto error;
 #endif
 	} else {
@@ -188,7 +188,7 @@ int exynos_jpeg_start(struct exynos_camera *exynos_camera,
 
 	rc = jpeghal_set_outbuf(fd, buffer_out);
 	if (rc < 0) {
-		LOGE("%s: Unable to set output buffer", __func__);
+		ALOGE("%s: Unable to set output buffer", __func__);
 		goto error;
 	}
 
@@ -251,10 +251,10 @@ void exynos_jpeg_stop(struct exynos_camera *exynos_camera,
 	if (exynos_camera == NULL || jpeg == NULL)
 		return;
 
-	LOGD("%s()", __func__);
+	ALOGD("%s()", __func__);
 
 	if (!jpeg->enabled) {
-		LOGE("Jpeg was already stopped");
+		ALOGE("Jpeg was already stopped");
 		return;
 	}
 
@@ -305,10 +305,10 @@ int exynos_jpeg(struct exynos_camera *exynos_camera, struct exynos_jpeg *jpeg)
 	if (exynos_camera == NULL || jpeg == NULL)
 		return -EINVAL;
 
-	LOGD("%s()", __func__);
+	ALOGD("%s()", __func__);
 
 	if (!jpeg->enabled) {
-		LOGE("Jpeg was not started");
+		ALOGE("Jpeg was not started");
 		return -1;
 	}
 
@@ -317,7 +317,7 @@ int exynos_jpeg(struct exynos_camera *exynos_camera, struct exynos_jpeg *jpeg)
 
 	fd = jpeg->fd;
 	if (fd < 0) {
-		LOGE("%s: Invalid jpeg fd", __func__);
+		ALOGE("%s: Invalid jpeg fd", __func__);
 		goto error;
 	}
 
@@ -325,7 +325,7 @@ int exynos_jpeg(struct exynos_camera *exynos_camera, struct exynos_jpeg *jpeg)
 	if (jpeg->memory_in != NULL && jpeg->memory_in_ion_fd >= 0) {
 		rc = exynos_ion_msync(exynos_camera, jpeg->memory_in_ion_fd, 0, buffer_in->length[0]);
 		if (rc < 0) {
-			LOGE("%s: Unable to sync ION memory", __func__);
+			ALOGE("%s: Unable to sync ION memory", __func__);
 			goto error;
 		}
 	}
@@ -333,13 +333,13 @@ int exynos_jpeg(struct exynos_camera *exynos_camera, struct exynos_jpeg *jpeg)
 
 	rc = jpeghal_enc_exe(fd, buffer_in, buffer_out);
 	if (rc < 0) {
-		LOGE("%s: Unable to encode jpeg", __func__);
+		ALOGE("%s: Unable to encode jpeg", __func__);
 		goto error;
 	}
 
 	memory_size = jpeghal_g_ctrl(fd, V4L2_CID_CAM_JPEG_ENCODEDSIZE);
 	if (memory_size <= 0) {
-		LOGE("%s: Unable to get jpeg size", __func__);
+		ALOGE("%s: Unable to get jpeg size", __func__);
 		goto error;
 	}
 
@@ -349,7 +349,7 @@ int exynos_jpeg(struct exynos_camera *exynos_camera, struct exynos_jpeg *jpeg)
 	if (jpeg->memory_out != NULL && jpeg->memory_out_ion_fd >= 0) {
 		rc = exynos_ion_msync(exynos_camera, jpeg->memory_out_ion_fd, 0, memory_size);
 		if (rc < 0) {
-			LOGE("%s: Unable to sync ION memory", __func__);
+			ALOGE("%s: Unable to sync ION memory", __func__);
 			goto error;
 		}
 	}

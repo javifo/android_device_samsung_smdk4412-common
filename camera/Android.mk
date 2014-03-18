@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ifneq ($(filter i9300 i9305 n7100 t0lte t0lteatt t0ltetmo i605 l900 r950,$(TARGET_DEVICE)),)
+
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -43,8 +45,10 @@ ifeq ($(TARGET_SOC),exynos4x12)
 	LOCAL_CFLAGS += -DEXYNOS_ION
 endif
 
-LOCAL_MODULE := camera.exynos4
+LOCAL_MODULE := camera.$(TARGET_BOOTLOADER_BOARD_NAME)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
+
+endif

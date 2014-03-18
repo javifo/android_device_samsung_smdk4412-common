@@ -28,7 +28,7 @@
 
 #include <asm/types.h>
 
-#define LOG_TAG "exynos_v4l2_output"
+#define ALOG_TAG "exynos_v4l2_output"
 #include <utils/Log.h>
 
 #include "exynos_camera.h"
@@ -53,10 +53,10 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 	if (exynos_camera == NULL || output == NULL)
 		return -EINVAL;
 
-//	LOGD("%s()", __func__);
+//	ALOGD("%s()", __func__);
 
 	if (output->enabled) {
-		LOGE("Output was already started");
+		ALOGE("Output was already started");
 		return -1;
 	}
 
@@ -72,7 +72,7 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 
 	buffers_count = output->buffers_count;
 	if (buffers_count <= 0) {
-		LOGE("%s: Invalid buffers count: %d", __func__, buffers_count);
+		ALOGE("%s: Invalid buffers count: %d", __func__, buffers_count);
 		goto error;
 	}
 
@@ -80,26 +80,26 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 
 	rc = exynos_v4l2_open(exynos_camera, v4l2_id);
 	if (rc < 0) {
-		LOGE("%s: Unable to open v4l2 device", __func__);
+		ALOGE("%s: Unable to open v4l2 device", __func__);
 		goto error;
 	}
 
 	rc = exynos_v4l2_querycap_out(exynos_camera, v4l2_id);
 	if (rc < 0) {
-		LOGE("%s: Unable to query capabilities", __func__);
+		ALOGE("%s: Unable to query capabilities", __func__);
 		goto error;
 	}
 
 	rc = exynos_v4l2_g_fmt_out(exynos_camera, v4l2_id, NULL, NULL, NULL);
 	if (rc < 0) {
-		LOGE("%s: Unable to get format", __func__);
+		ALOGE("%s: Unable to get format", __func__);
 		goto error;
 	}
 
 	value = 0;
 	rc = exynos_v4l2_g_ctrl(exynos_camera, v4l2_id, V4L2_CID_RESERVED_MEM_BASE_ADDR, &value);
 	if (rc < 0) {
-		LOGE("%s: Unable to get address", __func__);
+		ALOGE("%s: Unable to get address", __func__);
 		goto error;
 	}
 
@@ -108,7 +108,7 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 	value = 0;
 	rc = exynos_v4l2_g_ctrl(exynos_camera, v4l2_id, V4L2_CID_RESERVED_MEM_SIZE, &value);
 	if (rc < 0) {
-		LOGE("%s: Unable to get size", __func__);
+		ALOGE("%s: Unable to get size", __func__);
 		goto error;
 	}
 
@@ -116,25 +116,25 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 
 	rc = exynos_v4l2_s_ctrl(exynos_camera, v4l2_id, V4L2_CID_OVLY_MODE, FIMC_OVLY_NONE_MULTI_BUF);
 	if (rc < 0) {
-		LOGE("%s: Unable to set overlay mode", __func__);
+		ALOGE("%s: Unable to set overlay mode", __func__);
 		goto error;
 	}
 
 	rc = exynos_v4l2_s_fmt_pix_out(exynos_camera, v4l2_id, buffer_width, buffer_height, buffer_format, 0);
 	if (rc < 0) {
-		LOGE("%s: Unable to set output pixel format!", __func__);
+		ALOGE("%s: Unable to set output pixel format!", __func__);
 		goto error;
 	}
 
 	rc = exynos_v4l2_s_crop_out(exynos_camera, v4l2_id, 0, 0, buffer_width, buffer_height);
 	if (rc < 0) {
-		LOGE("%s: Unable to crop", __func__);
+		ALOGE("%s: Unable to crop", __func__);
 		goto error;
 	}
 
 	rc = exynos_v4l2_reqbufs_out(exynos_camera, v4l2_id, 1);
 	if (rc < 0) {
-		LOGE("%s: Unable to request buffers", __func__);
+		ALOGE("%s: Unable to request buffers", __func__);
 		goto error;
 	}
 
@@ -149,46 +149,46 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 			goto error;
 
 		buffers_count = i;
-		LOGD("Found %d buffers available for output!", buffers_count);
+		ALOGD("Found %d buffers available for output!", buffers_count);
 
 		if (EXYNOS_CAMERA_CALLBACK_DEFINED(request_memory)) {
 			fd = exynos_v4l2_fd(exynos_camera, v4l2_id);
 			if (fd < 0) {
-				LOGE("%s: Unable to get v4l2 fd for id %d", __func__, v4l2_id);
+				ALOGE("%s: Unable to get v4l2 fd for id %d", __func__, v4l2_id);
 				goto error;
 			}
 
 			memory = exynos_camera->callbacks.request_memory(fd, buffer_length, buffers_count, exynos_camera->callbacks.user);
 			if (memory == NULL || memory->data == NULL || memory->data == MAP_FAILED) {
-				LOGE("%s: Unable to request memory", __func__);
+				ALOGE("%s: Unable to request memory", __func__);
 				goto error;
 			}
 		} else {
-			LOGE("%s: No memory request function!", __func__);
+			ALOGE("%s: No memory request function!", __func__);
 			goto error;
 		}
 	} else {
 #ifdef EXYNOS_ION
 		memory_ion_fd = exynos_ion_alloc(exynos_camera, buffers_count * buffer_length);
 		if (memory_ion_fd < 0) {
-			LOGE("%s: Unable to alloc ION memory", __func__);
+			ALOGE("%s: Unable to alloc ION memory", __func__);
 			goto error;
 		}
 
 		if (EXYNOS_CAMERA_CALLBACK_DEFINED(request_memory)) {
 			memory = exynos_camera->callbacks.request_memory(memory_ion_fd, buffer_length, buffers_count, exynos_camera->callbacks.user);
 			if (memory == NULL || memory->data == NULL || memory->data == MAP_FAILED) {
-				LOGE("%s: Unable to request memory", __func__);
+				ALOGE("%s: Unable to request memory", __func__);
 				goto error;
 			}
 		} else {
-			LOGE("%s: No memory request function!", __func__);
+			ALOGE("%s: No memory request function!", __func__);
 			goto error;
 		}
 
 		memory_address = exynos_ion_phys(exynos_camera, memory_ion_fd);
 #else
-		LOGE("%s: Unable to find memory", __func__);
+		ALOGE("%s: Unable to find memory", __func__);
 		goto error;
 #endif
 	}
@@ -235,10 +235,10 @@ void exynos_v4l2_output_stop(struct exynos_camera *exynos_camera,
 	if (exynos_camera == NULL || output == NULL)
 		return;
 
-//	LOGD("%s()", __func__);
+//	ALOGD("%s()", __func__);
 
 	if (!output->enabled) {
-		LOGE("Output was already stopped");
+		ALOGE("Output was already stopped");
 		return;
 	}
 
@@ -246,7 +246,7 @@ void exynos_v4l2_output_stop(struct exynos_camera *exynos_camera,
 
 	rc = exynos_v4l2_reqbufs_out(exynos_camera, v4l2_id, 0);
 	if (rc < 0)
-		LOGE("%s: Unable to request buffers", __func__);
+		ALOGE("%s: Unable to request buffers", __func__);
 
 	if (output->memory != NULL && output->memory->release != NULL) {
 		output->memory->release(output->memory);
@@ -280,10 +280,10 @@ int exynos_v4l2_output(struct exynos_camera *exynos_camera,
 	if (exynos_camera == NULL || output == NULL)
 		return -EINVAL;
 
-//	LOGD("%s()", __func__);
+//	ALOGD("%s()", __func__);
 
 	if (!output->enabled) {
-		LOGE("Output was not started");
+		ALOGE("Output was not started");
 		return -1;
 	}
 
@@ -300,13 +300,13 @@ int exynos_v4l2_output(struct exynos_camera *exynos_camera,
 
 	rc = exynos_v4l2_g_fbuf(exynos_camera, v4l2_id, &fb_base, NULL, NULL, NULL);
 	if (rc < 0) {
-		LOGE("%s: Unable to get fbuf", __func__);
+		ALOGE("%s: Unable to get fbuf", __func__);
 		goto error;
 	}
 
 	rc = exynos_v4l2_s_fbuf(exynos_camera, v4l2_id, fb_base, width, height, format);
 	if (rc < 0) {
-		LOGE("%s: Unable to set fbuf", __func__);
+		ALOGE("%s: Unable to set fbuf", __func__);
 		goto error;
 	}
 
@@ -318,19 +318,19 @@ int exynos_v4l2_output(struct exynos_camera *exynos_camera,
 
 	rc = exynos_v4l2_s_ctrl(exynos_camera, v4l2_id, V4L2_CID_DST_INFO, (int) &fimc_buffer);
 	if (rc < 0) {
-		LOGE("%s: Unable to set dst info", __func__);
+		ALOGE("%s: Unable to set dst info", __func__);
 		goto error;
 	}
 
 	rc = exynos_v4l2_s_fmt_win(exynos_camera, v4l2_id, 0, 0, width, height);
 	if (rc < 0) {
-		LOGE("%s: Unable to set overlay win", __func__);
+		ALOGE("%s: Unable to set overlay win", __func__);
 		goto error;
 	}
 
 	rc = exynos_v4l2_streamon_out(exynos_camera, v4l2_id);
 	if (rc < 0) {
-		LOGE("%s: Unable to start stream", __func__);
+		ALOGE("%s: Unable to start stream", __func__);
 		goto error;
 	}
 
@@ -340,19 +340,19 @@ int exynos_v4l2_output(struct exynos_camera *exynos_camera,
 
 	rc = exynos_v4l2_qbuf_out(exynos_camera, v4l2_id, 0, (unsigned long) &fimc_buffer);
 	if (rc < 0) {
-		LOGE("%s: Unable to queue buffer", __func__);
+		ALOGE("%s: Unable to queue buffer", __func__);
 		goto error;
 	}
 
 	rc = exynos_v4l2_dqbuf_out(exynos_camera, v4l2_id);
 	if (rc < 0) {
-		LOGE("%s: Unable to dequeue buffer", __func__);
+		ALOGE("%s: Unable to dequeue buffer", __func__);
 		goto error;
 	}
 
 	rc = exynos_v4l2_streamoff_out(exynos_camera, v4l2_id);
 	if (rc < 0) {
-		LOGE("%s: Unable to stop stream", __func__);
+		ALOGE("%s: Unable to stop stream", __func__);
 		goto error;
 	}
 
@@ -375,7 +375,7 @@ int exynos_v4l2_output_release(struct exynos_camera *exynos_camera,
 	if (exynos_camera == NULL || output == NULL)
 		return -EINVAL;
 
-//	LOGD("%s()", __func__);
+//	ALOGD("%s()", __func__);
 
 	buffers_count = output->buffers_count;
 	memory_index = output->memory_index;

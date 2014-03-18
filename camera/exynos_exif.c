@@ -265,7 +265,7 @@ int exynos_exif_attributes_create_params(struct exynos_camera *exynos_camera,
 	rc = exynos_v4l2_g_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_EXIF_TV,
 		&shutter_speed);
 	if (rc < 0)
-		LOGE("%s: Unable to get shutter speed", __func__);
+		ALOGE("%s: Unable to get shutter speed", __func__);
 
 	attributes->shutter_speed.num = shutter_speed;
 	attributes->shutter_speed.den = 100;
@@ -276,28 +276,28 @@ int exynos_exif_attributes_create_params(struct exynos_camera *exynos_camera,
 	rc = exynos_v4l2_g_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_EXIF_ISO,
 		&iso_speed);
 	if (rc < 0)
-		LOGE("%s: Unable to get iso", __func__);
+		ALOGE("%s: Unable to get iso", __func__);
 
 	attributes->iso_speed_rating = iso_speed;
 
 	rc = exynos_v4l2_g_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_EXIF_FLASH,
 		&flash_results);
 	if (rc < 0)
-		LOGE("%s: Unable to get flash", __func__);
+		ALOGE("%s: Unable to get flash", __func__);
 
 	attributes->flash = flash_results;
 
 	rc = exynos_v4l2_g_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_EXIF_BV,
 		(int *) &bv);
 	if (rc < 0) {
-		LOGE("%s: Unable to get bv", __func__);
+		ALOGE("%s: Unable to get bv", __func__);
 		goto bv_static;
 	}
 
 	rc = exynos_v4l2_g_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_EXIF_EBV,
 		(int *) &ev);
 	if (rc < 0) {
-		LOGE("%s: Unable to get ebv", __func__);
+		ALOGE("%s: Unable to get ebv", __func__);
 		goto bv_static;
 	}
 
@@ -366,7 +366,7 @@ bv_ioctl:
 
 	rc = exynos_exif_attributes_create_gps(exynos_camera, exif);
 	if (rc < 0) {
-		LOGE("%s: Unable to create GPS attributes", __func__);
+		ALOGE("%s: Unable to create GPS attributes", __func__);
 		return -1;
 	}
 
@@ -416,22 +416,22 @@ int exynos_exif_start(struct exynos_camera *exynos_camera, struct exynos_exif *e
 	if (exynos_camera == NULL || exif == NULL)
 		return -EINVAL;
 
-	LOGD("%s()", __func__);
+	ALOGD("%s()", __func__);
 
 	if (exif->enabled) {
-		LOGE("Exif was already started");
+		ALOGE("Exif was already started");
 		return -1;
 	}
 
 	rc = exynos_exif_attributes_create_static(exynos_camera, exif);
 	if (rc < 0) {
-		LOGE("%s: Unable to create exif attributes", __func__);
+		ALOGE("%s: Unable to create exif attributes", __func__);
 		goto error;
 	}
 
 	rc = exynos_exif_attributes_create_params(exynos_camera, exif);
 	if (rc < 0) {
-		LOGE("%s: Unable to create exif parameters", __func__);
+		ALOGE("%s: Unable to create exif parameters", __func__);
 		goto error;
 	}
 
@@ -453,10 +453,10 @@ void exynos_exif_stop(struct exynos_camera *exynos_camera,
 	if (exynos_camera == NULL || exif == NULL)
 		return;
 
-	LOGD("%s()", __func__);
+	ALOGD("%s()", __func__);
 
 	if (!exif->enabled) {
-		LOGE("Exif was already stopped");
+		ALOGE("Exif was already stopped");
 		return;
 	}
 
@@ -498,10 +498,10 @@ int exynos_exif(struct exynos_camera *exynos_camera, struct exynos_exif *exif)
 	if (exynos_camera == NULL || exif == NULL)
 		return -EINVAL;
 
-	LOGD("%s()", __func__);
+	ALOGD("%s()", __func__);
 
 	if (!exif->enabled) {
-		LOGE("Exif was not started");
+		ALOGE("Exif was not started");
 		return -1;
 	}
 
@@ -509,7 +509,7 @@ int exynos_exif(struct exynos_camera *exynos_camera, struct exynos_exif *exif)
 	jpeg_thumbnail_size = exif->jpeg_thumbnail_size;
 
 	if (jpeg_thumbnail_data == NULL || jpeg_thumbnail_size <= 0) {
-		LOGE("%s: Invalid jpeg thumbnail", __func__);
+		ALOGE("%s: Invalid jpeg thumbnail", __func__);
 		goto error;
 	}
 
@@ -520,11 +520,11 @@ int exynos_exif(struct exynos_camera *exynos_camera, struct exynos_exif *exif)
 	if (EXYNOS_CAMERA_CALLBACK_DEFINED(request_memory)) {
 		memory = exynos_camera->callbacks.request_memory(-1, memory_size, 1, exynos_camera->callbacks.user);
 		if (memory == NULL || memory->data == NULL || memory->data == MAP_FAILED) {
-			LOGE("%s: Unable to request memory", __func__);
+			ALOGE("%s: Unable to request memory", __func__);
 			goto error;
 		}
 	} else {
-		LOGE("%s: No memory request function!", __func__);
+		ALOGE("%s: No memory request function!", __func__);
 		goto error;
 	}
 
