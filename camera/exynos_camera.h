@@ -52,6 +52,14 @@
 
 #define EXYNOS_CAMERA_ALIGN(value) ((value + (0x10000 - 1)) & ~(0x10000 - 1))
 
+#define ALL_FLASH "off,auto,on,torch"
+#define ALL_EFFECTS "none,mono,negative,sepia,solarize,posterize,washed,vintage-warm,vintage-cold,point-blue,point-red-yellow,point-green"
+#define ALL_WB "auto,incandescent,fluorescent,daylight,cloudy-daylight"
+#define ALL_ISO "auto,ISO100,ISO200,ISO400,ISO800"
+#define ALL_METER "center,spot,matrix"
+
+#define NUM_SCENE_MODE_PRESETS 14 //(SCENE_MODE_MAX - 2) ??
+
 /*
  * Structures
  */
@@ -295,6 +303,7 @@ struct exynos_camera {
 
 	struct exynox_camera_config *config;
 	struct exynos_param *params;
+	int id;
 
 	struct exynos_camera_callbacks callbacks;
 	int callback_lock;
@@ -455,6 +464,30 @@ struct exynos_v4l2_ext_control {
 		char *string;
 	} data;
 } __attribute__ ((packed));
+
+struct exynos_camera_scn_mode_preset{
+	char *scene_mode;
+	int scene_mode_int;
+	bool touch2focus_allowed;
+	//bool burst_allowed;
+	//char *selfportrait_avail;
+	char *flash_mode;
+	char *flash_modes_avail;
+	//shooting mode (not possible??)
+	char *effects_avail;
+    int exp_comp; // Exposure compensation
+	int min_exp_comp;
+	int max_exp_comp;
+	char *focus_mode;
+	char *focus_modes_avail;
+	char *wb;
+	char *wb_avail;
+	char *iso;
+	char *iso_avail;
+	char *meter_avail;
+	char *wdr_avail;
+	char *img_stabil_avail; // Image stabilization
+};
 
 /*
  * Camera

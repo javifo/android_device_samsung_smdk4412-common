@@ -34,6 +34,8 @@
 #include <asm/types.h>
 
 #define LOG_TAG "exynos_camera"
+#define LOG_NDEBUG 0
+
 #include <utils/Log.h>
 #include <utils/Timers.h>
 
@@ -57,6 +59,291 @@ struct exynos_camera_mbus_resolution exynos_camera_mbus_resolutions_s5k6a3_galax
 	{ 1392, 1392,	1392, 1392 },
 	{ 704, 704,	1392, 1392 },
 	{ 320, 320,	1392, 1392 },
+};
+
+//TODO: make scene_mode_presets[][SCENE_MODE_MAX - 1] in order to depend also on camera id
+struct exynos_camera_scn_mode_preset scene_mode_presets[NUM_SCENE_MODE_PRESETS] = {
+	{
+		.scene_mode = "auto",
+		.scene_mode_int = SCENE_MODE_NONE,
+		.touch2focus_allowed = true,
+		.flash_mode = "auto",
+		.flash_modes_avail = ALL_FLASH,
+		.effects_avail = ALL_EFFECTS,
+		.exp_comp = 0,
+		.min_exp_comp = -4,
+		.max_exp_comp = 4,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto,macro",
+		.wb = "auto",
+		.wb_avail = ALL_WB,
+		.iso = "auto",
+		.iso_avail = ALL_ISO,
+		.meter_avail = ALL_METER,
+		.wdr_avail = "on,off",
+		.img_stabil_avail = "on,off",
+	},
+	{
+		.scene_mode = "portrait",
+		.scene_mode_int = SCENE_MODE_PORTRAIT,
+		.touch2focus_allowed = false,
+		.flash_mode = "off",
+		.flash_modes_avail = ALL_FLASH,
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "facedetect",
+		.focus_modes_avail = "facedetect", //not yet in frameworks/av/camera/CameraParameters.cpp
+		.wb = "auto",
+		.wb_avail = "auto",
+		.iso = "auto",
+		.iso_avail = "auto",
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "night",
+		.scene_mode_int = SCENE_MODE_NIGHTSHOT,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = "off",
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "auto",
+		.wb_avail = "auto",
+		.iso = "auto",
+		.iso_avail = "auto",
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "back-light",
+		.scene_mode_int = SCENE_MODE_BACK_LIGHT,
+		.touch2focus_allowed = true,
+		.flash_mode = "on",
+		.flash_modes_avail = "on,off",
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "auto",
+		.wb_avail = "auto",
+		.iso = "auto",
+		.iso_avail = "auto",
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "landscape",
+		.scene_mode_int = SCENE_MODE_LANDSCAPE,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = "off",
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "auto",
+		.wb_avail = "auto",
+		.iso = "auto",
+		.iso_avail = "auto",
+		.meter_avail = "matrix",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "sports",
+		.scene_mode_int = SCENE_MODE_SPORTS,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = "off",
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "auto",
+		.wb_avail = "auto",
+		.iso = "auto",
+		.iso_avail = "auto",
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "party",
+		.scene_mode_int = SCENE_MODE_PARTY_INDOOR,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = ALL_FLASH,
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "auto",
+		.wb_avail = "auto",
+		.iso = "ISO200",
+		.iso_avail = "ISO200",
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "beach",
+		.scene_mode_int = SCENE_MODE_BEACH_SNOW,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = "off",
+		.effects_avail = "none",
+		.exp_comp = 1,
+		.min_exp_comp = 1,
+		.max_exp_comp = 1,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "auto",
+		.wb_avail = "auto",
+		.iso = "ISO100",
+		.iso_avail = "ISO100", // there is no iso50 :-O
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "sunset",
+		.scene_mode_int = SCENE_MODE_SUNSET,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = "off",
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "daylight",
+		.wb_avail = "daylight",
+		.iso = "auto",
+		.iso_avail = "auto",
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "dusk-dawn",
+		.scene_mode_int = SCENE_MODE_DUSK_DAWN,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = "off",
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "fluorescent",
+		.wb_avail = "fluorescent",
+		.iso = "auto",
+		.iso_avail = "auto",
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "fall-color,",
+		.scene_mode_int = SCENE_MODE_FALL_COLOR,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = "off",
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "auto",
+		.wb_avail = "auto",
+		.iso = "auto",
+		.iso_avail = "auto",
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "fireworks",
+		.scene_mode_int = SCENE_MODE_FIREWORKS,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = "off",
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "auto",
+		.wb_avail = "auto",
+		.iso = "ISO100",
+		.iso_avail = "ISO100", // there is no iso50 :-O
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "text",
+		.scene_mode_int = SCENE_MODE_TEXT,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = ALL_FLASH,
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "macro",
+		.focus_modes_avail = "macro",
+		.wb = "auto",
+		.wb_avail = "auto",
+		.iso = "auto",
+		.iso_avail = "auto",
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	{
+		.scene_mode = "candlelight",
+		.scene_mode_int = SCENE_MODE_CANDLE_LIGHT,
+		.touch2focus_allowed = true,
+		.flash_mode = "off",
+		.flash_modes_avail = "off",
+		.effects_avail = "none",
+		.exp_comp = 0,
+		.min_exp_comp = 0,
+		.max_exp_comp = 0,
+		.focus_mode = "auto",
+		.focus_modes_avail = "auto",
+		.wb = "daylight",
+		.wb_avail = "daylight",
+		.iso = "auto",
+		.iso_avail = "auto",
+		.meter_avail = "center",
+		.wdr_avail = "off",
+		.img_stabil_avail = "off",
+	},
+	//SCENE_MODE_LOW_LIGHT is a dummy scene mode
 };
 
 struct exynos_camera_preset exynos_camera_presets_galaxys3[] = {
@@ -120,7 +407,7 @@ struct exynos_camera_preset exynos_camera_presets_galaxys3[] = {
 			.auto_white_balance_lock = 0,
 
 			.flash_mode = "off",
-			.flash_mode_values = "off,auto,on,torch",
+			.flash_mode_values = ALL_FLASH,
 
 			.exposure_compensation = 0,
 			.exposure_compensation_step = 0.5,
@@ -128,7 +415,7 @@ struct exynos_camera_preset exynos_camera_presets_galaxys3[] = {
 			.max_exposure_compensation = 4,
 
 			.whitebalance = "auto",
-			.whitebalance_values = "auto,incandescent,fluorescent,daylight,cloudy-daylight",
+			.whitebalance_values = ALL_WB,
 
 			.antibanding = "auto",
 			.antibanding_values = "off,auto,50hz,60hz",
@@ -137,10 +424,10 @@ struct exynos_camera_preset exynos_camera_presets_galaxys3[] = {
 			.scene_mode_values = "auto,portrait,landscape,night,beach,snow,sunset,fireworks,sports,party,candlelight,dusk-dawn,fall-color,text,back-light,high-sensitivity",
 
 			.effect = "none",
-			.effect_values = "none,mono,negative,sepia,solarize,posterize,washed,vintage-warm,vintage-cold,point-blue,point-red-yellow,point-green",
+			.effect_values = ALL_EFFECTS,
 
 			.iso = "auto",
-			.iso_values = "auto,ISO100,ISO200,ISO400,ISO800",
+			.iso_values = ALL_ISO,
 
 			.image_stabilization = "off",
 			.image_stabilization_values = "on,off",
@@ -373,14 +660,161 @@ void exynos_camera_stop(struct exynos_camera *exynos_camera)
 #endif
 }
 
+struct exynos_camera_scn_mode_preset *scene_mode_cfg_get(char *scene_mode)
+{
+	int i;
+	struct exynos_camera_scn_mode_preset *cfg = NULL;
+
+	//ALOGD("%s", __func__);
+
+	if (scene_mode != NULL) {
+		cfg = (struct exynos_camera_scn_mode_preset *) calloc(1, sizeof(struct exynos_camera_scn_mode_preset));
+		if (cfg != NULL) {
+			//ALOGI("%s Allocation Ok", __func__);
+			for (i = 0; i < NUM_SCENE_MODE_PRESETS; i++) {
+				//ALOGI("%s Checking '%s'", __func__, scene_mode_presets[i].scene_mode);
+				if (strcmp(scene_mode_presets[i].scene_mode, scene_mode) == 0) {
+					//ALOGI("%s Found '%s' here i=%d", __func__, scene_mode_presets[i].scene_mode, i);
+					cfg = &(scene_mode_presets[i]);
+					break;
+				}
+			}
+		}
+	}
+
+	return cfg;
+}
+
+void scene_mode_params_set(struct exynos_camera *exynos_camera, char *scene_mode, struct exynos_camera_preset presets)
+{
+	struct exynos_camera_scn_mode_preset *scene_mode_cfg = NULL;
+
+	ALOGI("%s exynos_camera=%p camera_id=%d scene_mode=%s", __func__, exynos_camera, exynos_camera->id, scene_mode);
+
+	// Front camera doesn't have scene mode
+	if (scene_mode != NULL) {
+		ALOGI("%s Setting scene mode to '%s' values '%s'", __func__, scene_mode, presets.params.scene_mode_values);
+		exynos_param_string_set(exynos_camera, "scene-mode", strdup(scene_mode));
+		exynos_param_string_set(exynos_camera, "scene-mode-values",
+			presets.params.scene_mode_values);
+	}
+
+	scene_mode_cfg = scene_mode_cfg_get(scene_mode);
+	if (scene_mode_cfg == NULL) {
+		ALOGE("%s Unable to get scene_mode config for '%s'", __func__, scene_mode);
+
+		// Fallback to presets
+
+		// Focus
+		exynos_param_string_set(exynos_camera, "focus-mode",
+			presets.params.focus_mode);
+		exynos_param_string_set(exynos_camera, "focus-mode-values",
+			presets.params.focus_mode_values);
+
+		// Flash
+		exynos_param_string_set(exynos_camera, "flash-mode",
+			presets.params.flash_mode);
+		exynos_param_string_set(exynos_camera, "flash-mode-values",
+			presets.params.flash_mode_values);
+
+		// Exposure
+		exynos_param_int_set(exynos_camera, "exposure-compensation",
+			presets.params.exposure_compensation);
+		exynos_param_int_set(exynos_camera, "min-exposure-compensation",
+			presets.params.min_exposure_compensation);
+		exynos_param_int_set(exynos_camera, "max-exposure-compensation",
+			presets.params.max_exposure_compensation);
+
+		// WB
+		exynos_param_string_set(exynos_camera, "whitebalance",
+			presets.params.whitebalance);
+		exynos_param_string_set(exynos_camera, "whitebalance-values",
+			presets.params.whitebalance_values);
+
+		// Effect
+		exynos_param_string_set(exynos_camera, "effect",
+			presets.params.effect);
+		exynos_param_string_set(exynos_camera, "effect-values",
+			presets.params.effect_values);
+
+		// ISO
+		exynos_param_string_set(exynos_camera, "iso",
+			presets.params.iso);
+		exynos_param_string_set(exynos_camera, "iso-values",
+			presets.params.iso_values);
+
+		// Focus
+		exynos_param_string_set(exynos_camera, "focus-areas",
+			presets.params.focus_areas); //exynos_camera->raw_focus_areas?
+		exynos_param_int_set(exynos_camera, "max-num-focus-areas",
+			presets.params.max_num_focus_areas);
+
+	} else {
+		// We suppose that scene_mode_cfg settings are correctly maintained
+
+		// Focus
+		exynos_param_string_set(exynos_camera, "focus-mode",
+			scene_mode_cfg->focus_mode);
+		exynos_param_string_set(exynos_camera, "focus-mode-values",
+			scene_mode_cfg->focus_modes_avail);
+
+		// Flash
+		exynos_param_string_set(exynos_camera, "flash-mode",
+			scene_mode_cfg->flash_mode);
+		exynos_param_string_set(exynos_camera, "flash-mode-values",
+			scene_mode_cfg->flash_modes_avail);
+
+		// Exposure
+		exynos_param_int_set(exynos_camera, "exposure-compensation",
+			scene_mode_cfg->exp_comp);
+		exynos_param_int_set(exynos_camera, "min-exposure-compensation",
+			scene_mode_cfg->min_exp_comp);
+		exynos_param_int_set(exynos_camera, "max-exposure-compensation",
+			scene_mode_cfg->max_exp_comp);
+
+		// WB
+		exynos_param_string_set(exynos_camera, "whitebalance",
+			scene_mode_cfg->wb);
+		exynos_param_string_set(exynos_camera, "whitebalance-values",
+			scene_mode_cfg->wb_avail);
+
+		// Effect
+		exynos_param_string_set(exynos_camera, "effect",
+			presets.params.effect);  //default to preset value
+		exynos_param_string_set(exynos_camera, "effect-values",
+			scene_mode_cfg->effects_avail);
+
+		// ISO
+		exynos_param_string_set(exynos_camera, "iso",
+			scene_mode_cfg->iso);
+		exynos_param_string_set(exynos_camera, "iso-values",
+			scene_mode_cfg->iso_avail);
+
+		// Focus
+		if (scene_mode_cfg->touch2focus_allowed) {
+			exynos_param_string_set(exynos_camera, "focus-areas",
+				presets.params.focus_areas); //exynos_camera->raw_focus_areas?
+			exynos_param_int_set(exynos_camera, "max-num-focus-areas",
+				presets.params.max_num_focus_areas);
+		} else {
+			exynos_param_string_set(exynos_camera, "focus-areas",
+				presets.params.focus_areas); //exynos_camera->raw_focus_areas?
+			exynos_param_int_set(exynos_camera, "max-num-focus-areas", 0);
+		}
+	}
+}
+
 // Params
 
 int exynos_camera_params_init(struct exynos_camera *exynos_camera, int id)
 {
 	int rc;
+	char *scene_mode = NULL;
 
 	if (exynos_camera == NULL || id >= exynos_camera->config->presets_count)
 		return -EINVAL;
+
+	exynos_camera->id = id;
 
 	// Camera params
 
@@ -455,12 +889,12 @@ int exynos_camera_params_init(struct exynos_camera *exynos_camera, int id)
 	exynos_param_string_set(exynos_camera, "video-frame-format",
 		exynos_camera->config->presets[id].params.recording_format);
 
-	// Focus
+	// Parameters depending on scene mode
+	// Scene mode
+	scene_mode = exynos_camera->config->presets[id].params.scene_mode;
+	scene_mode_params_set(exynos_camera, scene_mode, exynos_camera->config->presets[id]);
 
-	exynos_param_string_set(exynos_camera, "focus-mode",
-		exynos_camera->config->presets[id].params.focus_mode);
-	exynos_param_string_set(exynos_camera, "focus-mode-values",
-		exynos_camera->config->presets[id].params.focus_mode_values);
+	// Scene mode-independent part of Focus
 	exynos_param_string_set(exynos_camera, "focus-distances",
 		exynos_camera->config->presets[id].params.focus_distances);
 	if (exynos_camera->config->presets[id].params.max_num_focus_areas > 0) {
@@ -512,23 +946,9 @@ int exynos_camera_params_init(struct exynos_camera *exynos_camera, int id)
 			exynos_param_string_set(exynos_camera, "auto-whitebalance-lock", "false");
 	}
 
-	// Flash
-
-	exynos_param_string_set(exynos_camera, "flash-mode",
-		exynos_camera->config->presets[id].params.flash_mode);
-	exynos_param_string_set(exynos_camera, "flash-mode-values",
-		exynos_camera->config->presets[id].params.flash_mode_values);
-
-	// Exposure
-
-	exynos_param_int_set(exynos_camera, "exposure-compensation",
-		exynos_camera->config->presets[id].params.exposure_compensation);
+	// Scene mode-independent part of Exposure
 	exynos_param_float_set(exynos_camera, "exposure-compensation-step",
 		exynos_camera->config->presets[id].params.exposure_compensation_step);
-	exynos_param_int_set(exynos_camera, "min-exposure-compensation",
-		exynos_camera->config->presets[id].params.min_exposure_compensation);
-	exynos_param_int_set(exynos_camera, "max-exposure-compensation",
-		exynos_camera->config->presets[id].params.max_exposure_compensation);
 
 	// Antibanding
 
@@ -536,34 +956,6 @@ int exynos_camera_params_init(struct exynos_camera *exynos_camera, int id)
 		exynos_camera->config->presets[id].params.antibanding);
 	exynos_param_string_set(exynos_camera, "antibanding-values",
 		exynos_camera->config->presets[id].params.antibanding_values);
-
-	// WB
-
-	exynos_param_string_set(exynos_camera, "whitebalance",
-		exynos_camera->config->presets[id].params.whitebalance);
-	exynos_param_string_set(exynos_camera, "whitebalance-values",
-		exynos_camera->config->presets[id].params.whitebalance_values);
-
-	// Scene mode
-
-	exynos_param_string_set(exynos_camera, "scene-mode",
-		exynos_camera->config->presets[id].params.scene_mode);
-	exynos_param_string_set(exynos_camera, "scene-mode-values",
-		exynos_camera->config->presets[id].params.scene_mode_values);
-
-	// Effect
-
-	exynos_param_string_set(exynos_camera, "effect",
-		exynos_camera->config->presets[id].params.effect);
-	exynos_param_string_set(exynos_camera, "effect-values",
-		exynos_camera->config->presets[id].params.effect_values);
-
-	// ISO
-
-	exynos_param_string_set(exynos_camera, "iso",
-		exynos_camera->config->presets[id].params.iso);
-	exynos_param_string_set(exynos_camera, "iso-values",
-		exynos_camera->config->presets[id].params.iso_values);
 
 	// Image stabilization
 
@@ -879,6 +1271,58 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 			ALOGE("%s: Unable to set FIMC-IS scenario", __func__);
 	}
 
+	// Scene mode
+	scene_mode_string = exynos_param_string_get(exynos_camera, "scene-mode");
+	if (scene_mode_string != NULL) {
+		if (strcmp(scene_mode_string, "auto") == 0)
+			scene_mode = SCENE_MODE_NONE;
+		else if (strcmp(scene_mode_string, "portrait") == 0)
+			scene_mode = SCENE_MODE_PORTRAIT;
+		else if (strcmp(scene_mode_string, "landscape") == 0)
+			scene_mode = SCENE_MODE_LANDSCAPE;
+		else if (strcmp(scene_mode_string, "night") == 0)
+			scene_mode = SCENE_MODE_NIGHTSHOT;
+		else if (strcmp(scene_mode_string, "beach") == 0)
+			scene_mode = SCENE_MODE_BEACH_SNOW;
+		else if (strcmp(scene_mode_string, "snow") == 0)
+			scene_mode = SCENE_MODE_BEACH_SNOW;
+		else if (strcmp(scene_mode_string, "sunset") == 0)
+			scene_mode = SCENE_MODE_SUNSET;
+		else if (strcmp(scene_mode_string, "fireworks") == 0)
+			scene_mode = SCENE_MODE_FIREWORKS;
+		else if (strcmp(scene_mode_string, "sports") == 0)
+			scene_mode = SCENE_MODE_SPORTS;
+		else if (strcmp(scene_mode_string, "party") == 0)
+			scene_mode = SCENE_MODE_PARTY_INDOOR;
+		else if (strcmp(scene_mode_string, "candlelight") == 0)
+			scene_mode = SCENE_MODE_CANDLE_LIGHT;
+		else if (strcmp(scene_mode_string, "dusk-dawn") == 0)
+			scene_mode = SCENE_MODE_DUSK_DAWN;
+		else if (strcmp(scene_mode_string, "fall-color") == 0)
+			scene_mode = SCENE_MODE_FALL_COLOR;
+		else if (strcmp(scene_mode_string, "back-light") == 0)
+			scene_mode = SCENE_MODE_BACK_LIGHT;
+		else if (strcmp(scene_mode_string, "text") == 0)
+			scene_mode = SCENE_MODE_TEXT;
+		else if (strcmp(scene_mode_string, "high-sensitivity") == 0)
+			scene_mode = SCENE_MODE_LOW_LIGHT;
+		else
+			scene_mode = SCENE_MODE_NONE;
+
+		// Scene mode has more prio, so restrict params depending on scene_mode
+		if ((force == 0) && (scene_mode != exynos_camera->scene_mode)) {
+			ALOGI("%s Applying scene_mode '%d'(%s) old_scene_mode '%d'", __func__, scene_mode, scene_mode_string, exynos_camera->scene_mode);
+			scene_mode_params_set(exynos_camera, scene_mode_string, exynos_camera->config->presets[exynos_camera->id]);
+		}
+
+		if (scene_mode != exynos_camera->scene_mode || force) {
+			exynos_camera->scene_mode = scene_mode;
+			rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_SCENE_MODE, scene_mode);
+			if (rc < 0)
+				ALOGE("%s: Unable to set scene mode", __func__);
+		}
+	}
+
 	// Focus
 
 	focus_areas_string = exynos_param_string_get(exynos_camera, "focus-areas");
@@ -921,9 +1365,14 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 	focus_mode_string = exynos_param_string_get(exynos_camera, "focus-mode");
 	if (focus_mode_string != NULL) {
 		if (focus_mode == 0) {
-			if (strcmp(focus_mode_string, "auto") == 0)
-				focus_mode = FOCUS_MODE_AUTO;
-			else if (strcmp(focus_mode_string, "infinity") == 0)
+			if (strcmp(focus_mode_string, "auto") == 0) {
+				/* Use continous focus picture/video for auto focus. Stock sammy does it. */
+				if (camera_sensor_mode == SENSOR_CAMERA)
+					focus_mode = FOCUS_MODE_CONTINOUS_PICTURE;
+				else
+					focus_mode = FOCUS_MODE_CONTINOUS_VIDEO;
+
+			} else if (strcmp(focus_mode_string, "infinity") == 0)
 				focus_mode = FOCUS_MODE_INFINITY;
 			else if (strcmp(focus_mode_string, "macro") == 0)
 				focus_mode = FOCUS_MODE_MACRO;
@@ -1082,53 +1531,6 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 			rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_WHITE_BALANCE, whitebalance);
 			if (rc < 0)
 				ALOGE("%s: Unable to set whitebalance", __func__);
-		}
-	}
-
-	// Scene mode
-
-	scene_mode_string = exynos_param_string_get(exynos_camera, "scene-mode");
-	if (scene_mode_string != NULL) {
-		if (strcmp(scene_mode_string, "auto") == 0)
-			scene_mode = SCENE_MODE_NONE;
-		else if (strcmp(scene_mode_string, "portrait") == 0)
-			scene_mode = SCENE_MODE_PORTRAIT;
-		else if (strcmp(scene_mode_string, "landscape") == 0)
-			scene_mode = SCENE_MODE_LANDSCAPE;
-		else if (strcmp(scene_mode_string, "night") == 0)
-			scene_mode = SCENE_MODE_NIGHTSHOT;
-		else if (strcmp(scene_mode_string, "beach") == 0)
-			scene_mode = SCENE_MODE_BEACH_SNOW;
-		else if (strcmp(scene_mode_string, "snow") == 0)
-			scene_mode = SCENE_MODE_BEACH_SNOW;
-		else if (strcmp(scene_mode_string, "sunset") == 0)
-			scene_mode = SCENE_MODE_SUNSET;
-		else if (strcmp(scene_mode_string, "fireworks") == 0)
-			scene_mode = SCENE_MODE_FIREWORKS;
-		else if (strcmp(scene_mode_string, "sports") == 0)
-			scene_mode = SCENE_MODE_SPORTS;
-		else if (strcmp(scene_mode_string, "party") == 0)
-			scene_mode = SCENE_MODE_PARTY_INDOOR;
-		else if (strcmp(scene_mode_string, "candlelight") == 0)
-			scene_mode = SCENE_MODE_CANDLE_LIGHT;
-		else if (strcmp(scene_mode_string, "dusk-dawn") == 0)
-			scene_mode = SCENE_MODE_DUSK_DAWN;
-		else if (strcmp(scene_mode_string, "fall-color") == 0)
-			scene_mode = SCENE_MODE_FALL_COLOR;
-		else if (strcmp(scene_mode_string, "back-light") == 0)
-			scene_mode = SCENE_MODE_BACK_LIGHT;
-		else if (strcmp(scene_mode_string, "text") == 0)
-			scene_mode = SCENE_MODE_TEXT;
-		else if (strcmp(scene_mode_string, "high-sensitivity") == 0)
-			scene_mode = SCENE_MODE_LOW_LIGHT;
-		else
-			scene_mode = SCENE_MODE_NONE;
-
-		if (scene_mode != exynos_camera->scene_mode || force) {
-			exynos_camera->scene_mode = scene_mode;
-			rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_SCENE_MODE, scene_mode);
-			if (rc < 0)
-				ALOGE("%s: Unable to set scene mode", __func__);
 		}
 	}
 
