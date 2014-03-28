@@ -1650,7 +1650,7 @@ int exynos_camera_capture(struct exynos_camera *exynos_camera)
 
 			exynos_camera_picture_thread_start(exynos_camera);
 
-			memcpy(buffer, &exynos_camera->picture_yuv_buffer, sizeof(struct exynos_camera_buffer));
+			goto capture_done;
 		}
 	} else {
 		buffers_count = 1;
@@ -1668,6 +1668,8 @@ int exynos_camera_capture(struct exynos_camera *exynos_camera)
 		if (exynos_camera->picture_enabled) {
 			memcpy(&exynos_camera->picture_yuv_buffer, buffer, sizeof(struct exynos_camera_buffer));
 			exynos_camera_picture_thread_start(exynos_camera);
+
+			goto capture_done;
 		}
 	}
 
@@ -1715,6 +1717,7 @@ int exynos_camera_capture(struct exynos_camera *exynos_camera)
 			exynos_camera_recording_output_stop(exynos_camera);
 	}
 
+capture_done:
 	rc = exynos_v4l2_qbuf_cap(exynos_camera, 0, index);
 	if (rc < 0) {
 		ALOGE("%s: Unable to queue buffer", __func__);
