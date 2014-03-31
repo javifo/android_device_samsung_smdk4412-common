@@ -304,6 +304,8 @@ struct exynos_camera {
 
 	gralloc_module_t *gralloc;
 
+	bool init;
+
 	// Capture
 
 	pthread_t capture_thread;

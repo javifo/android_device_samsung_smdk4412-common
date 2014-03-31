@@ -332,11 +332,20 @@ int exynos_camera_start(struct exynos_camera *exynos_camera, int id)
 
 	exynos_camera->recording_metadata = 1;
 
-	// Params
-
+	// Initialize Params with presets
+	/* TODO:
+	 * Divide exynos_camera_params_apply() into atomic operations
+	 */
 	rc = exynos_camera_params_init(exynos_camera, id);
 	if (rc < 0) {
 		ALOGE("%s: Unable to init params", __func__);
+		goto error;
+	}
+
+	// Initialize exynos_camera struct
+	rc = exynos_camera_init(exynos_camera);
+	if (rc < 0) {
+		ALOGE("%s: Unable to init exynos_camera", __func__);
 		goto error;
 	}
 
@@ -590,12 +599,6 @@ int exynos_camera_params_init(struct exynos_camera *exynos_camera, int id)
 	exynos_param_float_set(exynos_camera, "vertical-view-angle",
 		exynos_camera->config->presets[id].vertical_view_angle);
 
-	rc = exynos_camera_params_apply(exynos_camera, 1);
-	if (rc < 0) {
-		ALOGE("%s: Unable to apply params", __func__);
-		return -1;
-	}
-
 	return 0;
 }
 
@@ -618,6 +621,466 @@ static int validate_focus_areas(int l, int t, int r, int b, int w) {
 	if ((l !=0 || r !=0) && (w < 1 || w > 1000)) {
 		return -EINVAL;
 	}
+	return 0;
+}
+
+// Initialize exynos_camera structure from presets
+
+int exynos_camera_init(struct exynos_camera *exynos_camera)
+{
+	char *recording_hint_string;
+
+	char *preview_size_string;
+	int preview_width = 0;
+	int preview_height = 0;
+	char *preview_format_string;
+	int preview_format;
+	int preview_fps;
+
+	char *picture_size_string;
+	int picture_width = 0;
+	int picture_height = 0;
+	char *picture_format_string;
+	int picture_format;
+
+	int jpeg_thumbnail_width;
+	int jpeg_thumbnail_height;
+	int jpeg_thumbnail_quality;
+	int jpeg_quality;
+
+	char *video_size_string;
+	int recording_width = 0;
+	int recording_height = 0;
+	char *video_frame_format_string;
+	int recording_format;
+	int camera_sensor_mode;
+	int fimc_is_mode = 0;
+
+	char *focus_mode_string;
+	int focus_mode = FOCUS_MODE_DEFAULT;
+
+	char *flash_mode_string;
+	int flash_mode = 0;
+
+	int exposure_compensation;
+	int min_exposure_compensation;
+	int max_exposure_compensation;
+
+	char *antibanding_string;
+	int antibanding;
+
+	char *whitebalance_string;
+	int whitebalance;
+
+	char *scene_mode_string;
+	int scene_mode;
+
+	char *effect_string;
+	int effect;
+
+	char *iso_string;
+	int iso;
+
+	char *image_stabilization_string;
+	int image_stabilization;
+
+	int w, h;
+	char *k;
+	int rc;
+
+	if (exynos_camera == NULL)
+		return -EINVAL;
+
+	if (exynos_camera->init != true)
+		return -EINVAL;
+
+	// Preview
+
+	preview_size_string = exynos_param_string_get(exynos_camera, "preview-size");
+	if (preview_size_string != NULL) {
+		sscanf(preview_size_string, "%dx%d", &preview_width, &preview_height);
+
+		if (preview_width < 0 && preview_height < 0) {
+			/* This should not happen on initialization, unless developer makes an error.
+			 * We'll leave this here, just to be sure. */
+			ALOGE("%s Wrong initialization value '%s' for preview-size", __func__, preview_size_string);
+
+			char reset_preview[128];
+			sprintf(reset_preview, "%dx%d", exynos_camera->preview_width, exynos_camera->preview_height);
+			exynos_param_string_set(exynos_camera, "preview-size",
+				reset_preview);
+			return -EINVAL;
+		}
+		if (preview_width != 0)
+			exynos_camera->preview_width = preview_width;
+		if (preview_height != 0)
+			exynos_camera->preview_height = preview_height;
+	}
+
+	preview_format_string = exynos_param_string_get(exynos_camera, "preview-format");
+	if (preview_format_string != NULL) {
+		if (strcmp(preview_format_string, "yuv420sp") == 0) {
+			preview_format = V4L2_PIX_FMT_NV21;
+		} else if (strcmp(preview_format_string, "yuv420p") == 0) {
+			preview_format = V4L2_PIX_FMT_YUV420;
+		} else if (strcmp(preview_format_string, "rgb565") == 0) {
+			preview_format = V4L2_PIX_FMT_RGB565;
+		} else if (strcmp(preview_format_string, "rgb8888") == 0) {
+			preview_format = V4L2_PIX_FMT_RGB32;
+		} else {
+			ALOGE("%s: Unsupported preview format: %s", __func__, preview_format_string);
+			preview_format = V4L2_PIX_FMT_NV21;
+		}
+
+		exynos_camera->preview_format = preview_format;
+	}
+
+	preview_fps = exynos_param_int_get(exynos_camera, "preview-frame-rate");
+	if (preview_fps > 0)
+		exynos_camera->preview_fps = preview_fps;
+	else
+		exynos_camera->preview_fps = 0;
+
+	// Picture
+
+	picture_size_string = exynos_param_string_get(exynos_camera, "picture-size");
+	if (picture_size_string != NULL) {
+		sscanf(picture_size_string, "%dx%d", &picture_width, &picture_height);
+
+		if (picture_width != 0 && picture_height != 0 ) {
+			exynos_camera->picture_width = picture_width;
+			exynos_camera->picture_height = picture_height;
+		}
+	}
+
+	picture_format_string = exynos_param_string_get(exynos_camera, "picture-format");
+	if (picture_format_string != NULL) {
+		if (strcmp(picture_format_string, "jpeg") == 0) {
+			picture_format = V4L2_PIX_FMT_JPEG;
+		} else {
+			ALOGE("%s: Unsupported picture format: %s", __func__, picture_format_string);
+			picture_format = V4L2_PIX_FMT_JPEG;
+		}
+
+		exynos_camera->picture_format = picture_format;
+	}
+
+	jpeg_thumbnail_width = exynos_param_int_get(exynos_camera, "jpeg-thumbnail-width");
+	if (jpeg_thumbnail_width > 0)
+		exynos_camera->jpeg_thumbnail_width = jpeg_thumbnail_width;
+
+	jpeg_thumbnail_height = exynos_param_int_get(exynos_camera, "jpeg-thumbnail-height");
+	if (jpeg_thumbnail_height > 0)
+		exynos_camera->jpeg_thumbnail_height = jpeg_thumbnail_height;
+
+	jpeg_thumbnail_quality = exynos_param_int_get(exynos_camera, "jpeg-thumbnail-quality");
+	if (jpeg_thumbnail_quality > 0)
+		exynos_camera->jpeg_thumbnail_quality = jpeg_thumbnail_quality;
+
+	jpeg_quality = exynos_param_int_get(exynos_camera, "jpeg-quality");
+	if (jpeg_quality <= 100 && jpeg_quality >= 0) {
+		exynos_camera->jpeg_quality = jpeg_quality;
+	}
+
+	// Recording
+
+	video_size_string = exynos_param_string_get(exynos_camera, "video-size");
+	if (video_size_string == NULL)
+		video_size_string = exynos_param_string_get(exynos_camera, "preview-size");
+
+	if (video_size_string != NULL) {
+		sscanf(video_size_string, "%dx%d", &recording_width, &recording_height);
+
+		if (recording_width != 0)
+			exynos_camera->recording_width = recording_width;
+		if (recording_height != 0)
+			exynos_camera->recording_height = recording_height;
+	}
+
+	video_frame_format_string = exynos_param_string_get(exynos_camera, "video-frame-format");
+	if (video_frame_format_string != NULL) {
+		if (strcmp(video_frame_format_string, "yuv420sp") == 0) {
+			recording_format = V4L2_PIX_FMT_NV12;
+		} else if (strcmp(video_frame_format_string, "yuv420p") == 0) {
+			recording_format = V4L2_PIX_FMT_YUV420;
+		} else if (strcmp(video_frame_format_string, "rgb565") == 0) {
+			recording_format = V4L2_PIX_FMT_RGB565;
+		} else if (strcmp(video_frame_format_string, "rgb8888") == 0) {
+			recording_format = V4L2_PIX_FMT_RGB32;
+		} else {
+			ALOGE("%s: Unsupported recording format: %s", __func__, video_frame_format_string);
+			recording_format = V4L2_PIX_FMT_NV12;
+		}
+
+		exynos_camera->recording_format = recording_format;
+	}
+
+	recording_hint_string = exynos_param_string_get(exynos_camera, "recording-hint");
+	if (recording_hint_string != NULL && strcmp(recording_hint_string, "true") == 0) {
+		camera_sensor_mode = SENSOR_MOVIE;
+
+		k = exynos_param_string_get(exynos_camera, "preview-size-values");
+		while (recording_width != 0 && recording_height != 0) {
+			if (k == NULL)
+				break;
+
+			sscanf(k, "%dx%d", &w, &h);
+
+			// Look for same aspect ratio
+			if ((recording_width * h) / recording_height == w) {
+				preview_width = w;
+				preview_height = h;
+				break;
+			}
+
+			k = strchr(k, ',');
+			if (k == NULL)
+				break;
+
+			k++;
+		}
+
+		if (preview_width != 0)
+			exynos_camera->preview_width = preview_width;
+		if (preview_height != 0)
+			exynos_camera->preview_height = preview_height;
+
+		if (exynos_camera->camera_fimc_is)
+			fimc_is_mode = IS_MODE_PREVIEW_VIDEO;
+	} else {
+		camera_sensor_mode = SENSOR_CAMERA;
+
+		if (exynos_camera->camera_fimc_is)
+			fimc_is_mode = IS_MODE_PREVIEW_STILL;
+	}
+
+	// Focus
+
+	// Zoom
+
+	// AE lock
+
+	// AWB lock
+
+	// Scene mode
+
+	scene_mode_string = exynos_param_string_get(exynos_camera, "scene-mode");
+	if (scene_mode_string != NULL) {
+		if (strcmp(scene_mode_string, "auto") == 0)
+			scene_mode = SCENE_MODE_NONE;
+		else if (strcmp(scene_mode_string, "portrait") == 0) {
+			scene_mode = SCENE_MODE_PORTRAIT;
+			flash_mode = FLASH_MODE_AUTO;
+		} else if (strcmp(scene_mode_string, "landscape") == 0)
+			scene_mode = SCENE_MODE_LANDSCAPE;
+		else if (strcmp(scene_mode_string, "night") == 0)
+			scene_mode = SCENE_MODE_NIGHTSHOT;
+		else if (strcmp(scene_mode_string, "beach") == 0)
+			scene_mode = SCENE_MODE_BEACH_SNOW;
+		else if (strcmp(scene_mode_string, "snow") == 0)
+			scene_mode = SCENE_MODE_BEACH_SNOW;
+		else if (strcmp(scene_mode_string, "sunset") == 0)
+			scene_mode = SCENE_MODE_SUNSET;
+		else if (strcmp(scene_mode_string, "fireworks") == 0)
+			scene_mode = SCENE_MODE_FIREWORKS;
+		else if (strcmp(scene_mode_string, "action") == 0)
+			scene_mode = SCENE_MODE_SPORTS;
+		else if (strcmp(scene_mode_string, "party") == 0) {
+			scene_mode = SCENE_MODE_PARTY_INDOOR;
+			flash_mode = FLASH_MODE_AUTO;
+		} else if (strcmp(scene_mode_string, "candlelight") == 0)
+			scene_mode = SCENE_MODE_CANDLE_LIGHT;
+		else if (strcmp(scene_mode_string, "dusk-dawn") == 0)
+			scene_mode = SCENE_MODE_DUSK_DAWN;
+		else if (strcmp(scene_mode_string, "fall-color") == 0)
+			scene_mode = SCENE_MODE_FALL_COLOR;
+		else if (strcmp(scene_mode_string, "back-light") == 0)
+			scene_mode = SCENE_MODE_BACK_LIGHT;
+		else if (strcmp(scene_mode_string, "text") == 0)
+			scene_mode = SCENE_MODE_TEXT;
+		else if (strcmp(scene_mode_string, "high-sensitivity") == 0)
+			scene_mode = SCENE_MODE_LOW_LIGHT;
+		else
+			scene_mode = SCENE_MODE_NONE;
+
+		exynos_camera->scene_mode = scene_mode;
+	}
+
+	// Flash
+
+	flash_mode_string = exynos_param_string_get(exynos_camera, "flash-mode");
+	if (flash_mode_string != NULL) {
+		if (strcmp(flash_mode_string, "off") == 0)
+			flash_mode = FLASH_MODE_OFF;
+		else if (strcmp(flash_mode_string, "auto") == 0)
+			flash_mode = FLASH_MODE_AUTO;
+		else if (strcmp(flash_mode_string, "on") == 0)
+			flash_mode = FLASH_MODE_ON;
+		else if (strcmp(flash_mode_string, "torch") == 0)
+			flash_mode = FLASH_MODE_TORCH;
+		else {
+			exynos_param_string_set(exynos_camera, "flash-mode",
+				exynos_camera->raw_flash_mode);
+			return -EINVAL;
+		}
+	}
+
+	exynos_camera->flash_mode = flash_mode;
+	sprintf(exynos_camera->raw_flash_mode, "%s", flash_mode_string);
+
+
+	focus_mode_string = exynos_param_string_get(exynos_camera, "focus-mode");
+	if (focus_mode_string != NULL) {
+		if (strcmp(focus_mode_string, "auto") == 0) {
+			 /* Use continous focus picture/video for auto focus. Stock sammy does it. */
+			 if (camera_sensor_mode == SENSOR_CAMERA)
+			 	focus_mode = FOCUS_MODE_CONTINOUS_PICTURE;
+			 else
+			 	focus_mode = FOCUS_MODE_CONTINOUS_VIDEO;
+		} else if (strcmp(focus_mode_string, "infinity") == 0)
+			focus_mode = FOCUS_MODE_INFINITY;
+		else if (strcmp(focus_mode_string, "macro") == 0)
+			focus_mode = FOCUS_MODE_MACRO;
+		else if (strcmp(focus_mode_string, "fixed") == 0)
+			focus_mode = FOCUS_MODE_FIXED;
+		else if (strcmp(focus_mode_string, "facedetect") == 0)
+			focus_mode = FOCUS_MODE_FACEDETECT;
+		else if (strcmp(focus_mode_string, "continuous-video") == 0)
+			focus_mode = FOCUS_MODE_CONTINOUS_VIDEO;
+		else if (strcmp(focus_mode_string, "continuous-picture") == 0)
+			focus_mode = FOCUS_MODE_CONTINOUS_PICTURE;
+		else {
+			exynos_param_string_set(exynos_camera, "focus-mode",
+				exynos_camera->raw_focus_mode);
+			return -EINVAL;
+		}
+	}
+
+	exynos_camera->focus_mode = focus_mode;
+	sprintf(exynos_camera->raw_focus_mode, "%s", focus_mode_string);
+
+	// Exposure
+
+	exposure_compensation = exynos_param_int_get(exynos_camera, "exposure-compensation");
+	min_exposure_compensation = exynos_param_int_get(exynos_camera, "min-exposure-compensation");
+	max_exposure_compensation = exynos_param_int_get(exynos_camera, "max-exposure-compensation");
+
+	if (exposure_compensation <= max_exposure_compensation && exposure_compensation >= min_exposure_compensation) {
+		exynos_camera->exposure_compensation = exposure_compensation;
+	}
+
+	// Antibanding
+
+	antibanding_string = exynos_param_string_get(exynos_camera, "antibanding");
+	if (antibanding_string != NULL) {
+		if (strcmp(antibanding_string, "auto") == 0)
+			antibanding = ANTI_BANDING_AUTO;
+		else if (strcmp(antibanding_string, "50hz") == 0)
+			antibanding = ANTI_BANDING_50HZ;
+		else if (strcmp(antibanding_string, "60hz") == 0)
+			antibanding = ANTI_BANDING_60HZ;
+		else if (strcmp(antibanding_string, "off") == 0)
+			antibanding = ANTI_BANDING_OFF;
+		else
+			antibanding = ANTI_BANDING_AUTO;
+
+		exynos_camera->antibanding = antibanding;
+	}
+
+	// WB
+
+	whitebalance_string = exynos_param_string_get(exynos_camera, "whitebalance");
+	if (whitebalance_string != NULL) {
+		if (strcmp(whitebalance_string, "auto") == 0)
+			whitebalance = WHITE_BALANCE_AUTO;
+		else if (strcmp(whitebalance_string, "incandescent") == 0)
+			whitebalance = WHITE_BALANCE_TUNGSTEN;
+		else if (strcmp(whitebalance_string, "fluorescent") == 0)
+			whitebalance = WHITE_BALANCE_FLUORESCENT;
+		else if (strcmp(whitebalance_string, "daylight") == 0)
+			whitebalance = WHITE_BALANCE_SUNNY;
+		else if (strcmp(whitebalance_string, "cloudy-daylight") == 0)
+			whitebalance = WHITE_BALANCE_CLOUDY;
+		else
+			whitebalance = WHITE_BALANCE_AUTO;
+
+		exynos_camera->whitebalance = whitebalance;
+	}
+
+	// Effect
+
+	effect_string = exynos_param_string_get(exynos_camera, "effect");
+	if (effect_string != NULL) {
+		if (strcmp(effect_string, "auto") == 0)
+			effect = IMAGE_EFFECT_NONE;
+		if (strcmp(effect_string, "none") == 0)
+			effect = IMAGE_EFFECT_NONE;
+		else if (strcmp(effect_string, "mono") == 0)
+			effect = IMAGE_EFFECT_BNW;
+		else if (strcmp(effect_string, "negative") == 0)
+			effect = IMAGE_EFFECT_NEGATIVE;
+		else if (strcmp(effect_string, "sepia") == 0)
+			effect = IMAGE_EFFECT_SEPIA;
+		else if (strcmp(effect_string, "aqua") == 0)
+			effect = IMAGE_EFFECT_AQUA;
+		else if (strcmp(effect_string, "solarize") == 0)
+			effect = IMAGE_EFFECT_SOLARIZE;
+		else if (strcmp(effect_string, "posterize") == 0)
+			effect = IMAGE_EFFECT_POSTERIZE;
+		else if (strcmp(effect_string, "washed") == 0)
+			effect = IMAGE_EFFECT_WASHED;
+		else if (strcmp(effect_string, "sketch") == 0)
+			effect = IMAGE_EFFECT_SKETCH;
+		else if (strcmp(effect_string, "vintage-warm") == 0)
+			effect = IMAGE_EFFECT_VINTAGE_WARM;
+		else if (strcmp(effect_string, "vintage-cold") == 0)
+			effect = IMAGE_EFFECT_VINTAGE_COLD;
+		else if (strcmp(effect_string, "point-blue") == 0)
+			effect = IMAGE_EFFECT_POINT_BLUE;
+		else if (strcmp(effect_string, "point-red-yellow") == 0)
+			effect = IMAGE_EFFECT_POINT_RED_YELLOW;
+		else if (strcmp(effect_string, "point-green") == 0)
+			effect = IMAGE_EFFECT_POINT_GREEN;
+		else
+			effect = IMAGE_EFFECT_NONE;
+
+		exynos_camera->effect = effect;
+	}
+
+	// ISO
+
+	iso_string = exynos_param_string_get(exynos_camera, "iso");
+	if (iso_string != NULL) {
+		if (strcmp(iso_string, "auto") == 0)
+			iso = ISO_AUTO;
+		else if (strcmp(iso_string, "ISO50") == 0)
+			iso = ISO_50;
+		else if (strcmp(iso_string, "ISO100") == 0)
+			iso = ISO_100;
+		else if (strcmp(iso_string, "ISO200") == 0)
+			iso = ISO_200;
+		else if (strcmp(iso_string, "ISO400") == 0)
+			iso = ISO_400;
+		else if (strcmp(iso_string, "ISO800") == 0)
+			iso = ISO_800;
+		else
+			iso = ISO_AUTO;
+
+		exynos_camera->iso = iso;
+	}
+
+	// Image stabilization (Anti-shake)
+
+	image_stabilization_string = exynos_param_string_get(exynos_camera, "image-stabilization");
+	if (image_stabilization_string != NULL) {
+		if (strcmp(image_stabilization_string, "on") == 0)
+			image_stabilization = ANTI_SHAKE_STILL_ON;
+		else
+			image_stabilization = ANTI_SHAKE_OFF;
+
+		exynos_camera->image_stabilization = image_stabilization;
+	}
+
 	return 0;
 }
 
@@ -1065,9 +1528,13 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 	focus_mode_string = exynos_param_string_get(exynos_camera, "focus-mode");
 	if (focus_mode_string != NULL) {
 		if (focus_mode == FOCUS_MODE_DEFAULT) {
-			if (strcmp(focus_mode_string, "auto") == 0)
-				focus_mode = FOCUS_MODE_AUTO;
-			else if (strcmp(focus_mode_string, "infinity") == 0)
+			if (strcmp(focus_mode_string, "auto") == 0) {
+				 /* Use continous focus picture/video for auto focus. Stock sammy does it. */
+				 if (camera_sensor_mode == SENSOR_CAMERA)
+				 	focus_mode = FOCUS_MODE_CONTINOUS_PICTURE;
+				 else
+				 	focus_mode = FOCUS_MODE_CONTINOUS_VIDEO;
+			} else if (strcmp(focus_mode_string, "infinity") == 0)
 				focus_mode = FOCUS_MODE_INFINITY;
 			else if (strcmp(focus_mode_string, "macro") == 0)
 				focus_mode = FOCUS_MODE_MACRO;
@@ -4570,6 +5037,8 @@ int exynos_camera_open(const struct hw_module_t* module, const char *camera_id,
 	if (id >= exynos_camera->config->presets_count)
 		goto error_preset;
 
+	exynos_camera->init = true;
+
 	rc = exynos_camera_start(exynos_camera, id);
 	if (rc < 0) {
 		ALOGE("%s: Unable to start camera", __func__);
@@ -4593,6 +5062,8 @@ int exynos_camera_open(const struct hw_module_t* module, const char *camera_id,
 
 	*device = (struct hw_device_t *) &(camera_device->common);
 
+	exynos_camera->init = false;
+
 	return 0;
 
 error:
@@ -4605,6 +5076,8 @@ error_device:
 error_preset:
 	if (exynos_camera != NULL)
 		free(exynos_camera);
+
+	exynos_camera->init = false;
 
 	return -1;
 }
