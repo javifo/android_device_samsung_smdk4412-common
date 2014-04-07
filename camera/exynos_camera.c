@@ -417,6 +417,8 @@ int exynos_camera_params_init(struct exynos_camera *exynos_camera, int id)
 	exynos_camera->camera_videosnapshot_resolutions = exynos_camera->config->presets[id].videosnapshot_resolutions;
 	exynos_camera->camera_videosnapshot_resolutions_count = exynos_camera->config->presets[id].videosnapshot_resolutions_count;
 
+	exynos_camera->camera_sensor_mode = SENSOR_CAMERA;
+	exynos_camera->preview_fps = 0;
 
 	// Recording preview
 
@@ -437,9 +439,9 @@ int exynos_camera_params_init(struct exynos_camera *exynos_camera, int id)
 		exynos_camera->config->presets[id].params.preview_frame_rate_values);
 	exynos_param_int_set(exynos_camera, "preview-frame-rate",
 		exynos_camera->config->presets[id].params.preview_frame_rate);
-	exynos_param_string_set(exynos_camera, "preview-fps-range-values",
+	exynos_param_string_set(exynos_camera, "preview-frame-rate-values",
 		exynos_camera->config->presets[id].params.preview_fps_range_values);
-	exynos_param_string_set(exynos_camera, "preview-fps-range",
+	exynos_param_string_set(exynos_camera, "preview-frame-rate",
 		exynos_camera->config->presets[id].params.preview_fps_range);
 
 	// Picture
@@ -721,6 +723,29 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 	if (exynos_camera == NULL)
 		return -EINVAL;
 
+	// Do not set params on HAL initialization, i.e. wait until app send us parameters
+	if (force == 1)
+		return 0;
+
+	// Handle sensor mode at the very beginning
+	recording_hint_string = exynos_param_string_get(exynos_camera, "recording-hint");
+	if (recording_hint_string != NULL && strcmp(recording_hint_string, "true") == 0)
+		camera_sensor_mode = SENSOR_MOVIE;
+	else
+		camera_sensor_mode = SENSOR_CAMERA;
+
+	ALOGE("%s recording_hint_string=%s camera_sensor_mode=%d", __func__, recording_hint_string, camera_sensor_mode);
+
+	// Switching mode for back camera
+	if (camera_sensor_mode != exynos_camera->camera_sensor_mode) {
+		exynos_camera->camera_sensor_mode = camera_sensor_mode;
+		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_SENSOR_MODE, camera_sensor_mode);
+		if (rc < 0)
+			ALOGE("%s: Unable to set sensor mode", __func__);
+	}
+
+	/* TODO: do it also here for front camera? */
+
 	// Preview
 
 	preview_size_string = exynos_param_string_get(exynos_camera, "preview-size");
@@ -759,11 +784,18 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 			exynos_camera->preview_format = preview_format;
 	}
 
-	preview_fps = exynos_param_int_get(exynos_camera, "preview-frame-rate");
-	if (preview_fps > 0)
-		exynos_camera->preview_fps = preview_fps;
-	else
-		exynos_camera->preview_fps = 0;
+	// Set preview frame rate. TODO: check for front camera
+	if (camera_sensor_mode == SENSOR_MOVIE) {
+		preview_fps = exynos_param_int_get(exynos_camera, "preview-frame-rate");
+		if ((preview_fps > 0) && (exynos_camera->preview_fps != preview_fps))
+			exynos_camera->preview_fps = preview_fps;
+		else
+			exynos_camera->preview_fps = 30;
+
+		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_FRAME_RATE, exynos_camera->preview_fps);
+		if (rc < 0)
+			ALOGE("%s: Unable to set frame rate", __func__);
+	}
 
 	// Picture
 
@@ -834,9 +866,7 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 			exynos_camera->recording_format = recording_format;
 	}
 
-	recording_hint_string = exynos_param_string_get(exynos_camera, "recording-hint");
-	if (recording_hint_string != NULL && strcmp(recording_hint_string, "true") == 0) {
-		camera_sensor_mode = SENSOR_MOVIE;
+	if (camera_sensor_mode == SENSOR_MOVIE) {
 
 		k = exynos_param_string_get(exynos_camera, "preview-size-values");
 		while (recording_width != 0 && recording_height != 0) {
@@ -867,8 +897,6 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 		if (exynos_camera->camera_fimc_is)
 			fimc_is_mode = IS_MODE_PREVIEW_VIDEO;
 	} else {
-		camera_sensor_mode = SENSOR_CAMERA;
-
 		if (exynos_camera->camera_fimc_is)
 			fimc_is_mode = IS_MODE_PREVIEW_STILL;
 	}
@@ -910,14 +938,8 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 		}
 	}
 
-	// Switching modes
-
-	if (camera_sensor_mode != exynos_camera->camera_sensor_mode) {
-		exynos_camera->camera_sensor_mode = camera_sensor_mode;
-		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_SENSOR_MODE, camera_sensor_mode);
-		if (rc < 0)
-			ALOGE("%s: Unable to set sensor mode", __func__);
-	}
+	// Switching mode for front camera
+	/* TODO: look when it is done in stock */
 
 	if (exynos_camera->camera_fimc_is && fimc_is_mode != exynos_camera->fimc_is_mode) {
 		exynos_camera->fimc_is_mode = fimc_is_mode;
@@ -949,23 +971,33 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 			if (focus_x != exynos_camera->focus_x || force) {
 				exynos_camera->focus_x = focus_x;
 
+				/* moved to exynos_camera_picture_start() and below (touch to focus)
 				rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_OBJECT_POSITION_X, focus_x);
 				if (rc < 0)
-					ALOGE("%s: Unable to set object x position", __func__);
+					ALOGE("%s: Unable to set object x position", __func__); */
 			}
 
 			if (focus_y != exynos_camera->focus_y || force) {
 				exynos_camera->focus_y = focus_y;
 
+				/* moved to exynos_camera_picture_start() and (touch to focus)
 				rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_OBJECT_POSITION_Y, focus_y);
 				if (rc < 0)
-					ALOGE("%s: Unable to set object y position", __func__);
+					ALOGE("%s: Unable to set object y position", __func__); */
 			}
 
 			/* After taking a picture, focus-areas is reseted by stock camera app to the center of the screen */
 			if (! ( (focus_x == (preview_width / 2)) && (focus_y == (preview_height / 2)) )) {
 				//ALOGV("%s focus_mode changed to %d due to focus-areas='%s'", __func__, focus_mode, focus_areas_string);
 				focus_mode = FOCUS_MODE_TOUCH;
+
+				rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_OBJECT_POSITION_X, focus_x);
+				if (rc < 0)
+					ALOGE("%s: Unable to set object x position", __func__);
+
+				rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_OBJECT_POSITION_Y, focus_y);
+				if (rc < 0)
+					ALOGE("%s: Unable to set object y position", __func__);
 			}
 		}
 
@@ -1104,9 +1136,12 @@ int exynos_camera_params_apply(struct exynos_camera *exynos_camera, int force)
 	focus_mode_string = exynos_param_string_get(exynos_camera, "focus-mode");
 	if (focus_mode_string != NULL) {
 		if (focus_mode == FOCUS_MODE_DEFAULT) {
-			if (strcmp(focus_mode_string, "auto") == 0)
-				focus_mode = FOCUS_MODE_AUTO;
-			else if (strcmp(focus_mode_string, "infinity") == 0)
+			if (strcmp(focus_mode_string, "auto") == 0) {
+				if (camera_sensor_mode == SENSOR_CAMERA)
+					focus_mode = FOCUS_MODE_CONTINOUS_PICTURE;
+				else
+					focus_mode = FOCUS_MODE_CONTINOUS_VIDEO;
+			} else if (strcmp(focus_mode_string, "infinity") == 0)
 				focus_mode = FOCUS_MODE_INFINITY;
 			else if (strcmp(focus_mode_string, "macro") == 0)
 				focus_mode = FOCUS_MODE_MACRO;
@@ -1972,7 +2007,7 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 			goto error;
 		}
 
-		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CACHEABLE, 0);
+		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CACHEABLE, 1);
 		if (rc < 0) {
 			ALOGE("%s: Unable to set cacheable", __func__);
 			goto error;
@@ -2014,7 +2049,7 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 	buffers_count = rc;
 	ALOGD("Found %d buffers available for capture!", buffers_count);
 
-	memset(&fps_param, 0, sizeof(fps_param));
+	/* memset(&fps_param, 0, sizeof(fps_param));
 	fps_param.parm.capture.timeperframe.numerator = 1;
 	fps_param.parm.capture.timeperframe.denominator = exynos_camera->preview_fps;
 
@@ -2022,7 +2057,7 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 	if (rc < 0) {
 		ALOGE("%s: Unable to set fps", __func__);
 		goto error;
-	}
+	} */
 
 	for (i = 0; i < buffers_count; i++) {
 		rc = exynos_v4l2_querybuf_cap(exynos_camera, 0, i);
@@ -2107,6 +2142,27 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 		ALOGE("%s: Unable to set vflip", __func__);
 		goto error;
 	}
+
+
+
+
+	//need to send V4L2_CID_DST_INFO (doesn't work)
+	/* struct fimc_buf fimc_buffer;
+	int address;
+	memset(&fimc_buffer, 0, sizeof(fimc_buffer));
+
+	address = exynos_camera->capture_memory_address + exynos_camera->capture_buffer_length * exynos_camera->capture_buffers_count;
+
+	exynos_camera_yuv_planes(mbus_width, mbus_height, format, address, (int *) &fimc_buffer.base[0], (int *) &fimc_buffer.base[1], (int *) &fimc_buffer.base[2]);
+
+	rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_DST_INFO, (int) &fimc_buffer);
+	if (rc < 0) {
+		ALOGE("%s: Unable to set dst info", __func__);
+		goto error;
+	} */
+
+
+
 
 	rc = exynos_v4l2_streamon_cap(exynos_camera, 0);
 	if (rc < 0) {
@@ -2788,7 +2844,7 @@ complete:
 
 int exynos_camera_picture_start(struct exynos_camera *exynos_camera)
 {
-	int rc;
+	int rc, value;
 
 	if (exynos_camera == NULL)
 		return -EINVAL;
@@ -2801,12 +2857,29 @@ int exynos_camera_picture_start(struct exynos_camera *exynos_camera)
 	}
 
 	if (!exynos_camera->camera_fimc_is) {
+		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_OBJECT_POSITION_X, exynos_camera->focus_x);
+		if (rc < 0)
+			ALOGE("%s: Unable to set object x position", __func__);
+
+		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_OBJECT_POSITION_Y, exynos_camera->focus_y);
+		if (rc < 0)
+			ALOGE("%s: Unable to set object y position", __func__);
+
 		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_CAPTURE, 0);
 		if (rc < 0) {
 			ALOGE("%s: Unable to set capture", __func__);
 			return -1;
 		}
 
+		// get pre-flash
+		value = 0;
+		rc = exynos_v4l2_g_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_CAPTURE, &value);
+		if (rc < 0) {
+			ALOGE("%s: Unable to get pre-flash", __func__);
+			//continue or exit??
+		}
+
+		// This is funny, without this, we cannot take picture. But stock takes picture without this :-O
 		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_HYBRID_CAPTURE, 1);
 		if (rc < 0) {
 			ALOGE("%s: Unable to set hybrid capture", __func__);
