@@ -41,7 +41,6 @@ system/lib/libUMP.so
 system/lib/libcec.so
 system/lib/libddc.so
 system/lib/libedid.so
-system/lib/libfimc.so
 system/lib/libfimg.so
 system/lib/libhdmi.so
 system/lib/libhdmiclient.so
