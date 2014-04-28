@@ -758,32 +758,31 @@ int exynos_v4l2_s_crop_out(struct exynos_camera *exynos_camera,
 }
 
 int exynos_v4l2_g_fbuf(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
-	void **base, int *width, int *height, int *fmt)
+	struct v4l2_framebuffer *framebuffer)
 {
-	struct v4l2_framebuffer framebuffer;
 	int rc;
 
 	if (exynos_camera == NULL)
 		return -EINVAL;
 
-	rc = exynos_v4l2_ioctl(exynos_camera, exynos_v4l2_id, VIDIOC_G_FBUF, &framebuffer);
+	rc = exynos_v4l2_ioctl(exynos_camera, exynos_v4l2_id, VIDIOC_G_FBUF, framebuffer);
 	if (rc < 0)
 		return rc;
 
-	if (base != NULL)
+	/*if (base != NULL)
 		*base = framebuffer.base;
 	if (width != NULL)
 		*width = framebuffer.fmt.width;
 	if (height != NULL)
 		*height = framebuffer.fmt.height;
 	if (fmt != NULL)
-		*fmt = framebuffer.fmt.pixelformat;
+		*fmt = framebuffer.fmt.pixelformat;*/
 
 	return 0;
 }
 
 int exynos_v4l2_s_fbuf(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
-	void *base, int width, int height, int fmt)
+	struct v4l2_framebuffer *base, int width, int height, int fmt)
 {
 	struct v4l2_framebuffer framebuffer;
 	int rc;

@@ -33,6 +33,72 @@
 
 #include "exynos_camera.h"
 
+int exynos_v4l2_output_init(struct exynos_camera *exynos_camera,
+	struct exynos_v4l2_output *output)
+{
+	int v4l2_id;
+	int value;
+	int rc;
+
+	if (exynos_camera == NULL || output == NULL)
+		return -EINVAL;
+
+//	ALOGD("%s()", __func__);
+
+	v4l2_id = output->v4l2_id;
+
+	if (output->initialized) {
+		ALOGE("Output was already been initialized");
+		return -1;
+	}
+
+	rc = exynos_v4l2_open(exynos_camera, v4l2_id);
+	if (rc < 0) {
+		ALOGE("%s: Unable to open v4l2 device", __func__);
+		return -1;
+	}
+
+	rc = exynos_v4l2_querycap_out(exynos_camera, v4l2_id);
+	if (rc < 0) {
+		ALOGE("%s: Unable to query capabilities", __func__);
+		return -1;
+	}
+
+	rc = exynos_v4l2_g_fmt_out(exynos_camera, v4l2_id, NULL, NULL, NULL);
+	if (rc < 0) {
+		ALOGE("%s: Unable to get format", __func__);
+		return -1;
+	}
+
+	value = 0;
+	rc = exynos_v4l2_g_ctrl(exynos_camera, v4l2_id, V4L2_CID_RESERVED_MEM_BASE_ADDR, &value);
+	if (rc < 0) {
+		ALOGE("%s: Unable to get address", __func__);
+		return -1;
+	}
+
+	output->mem_base_address = value;
+
+	value = 0;
+	rc = exynos_v4l2_g_ctrl(exynos_camera, v4l2_id, V4L2_CID_RESERVED_MEM_SIZE, &value);
+	if (rc < 0) {
+		ALOGE("%s: Unable to get size", __func__);
+		return -1;
+	}
+
+	output->reserved_mem_size = value * 1024;
+
+	rc = exynos_v4l2_s_ctrl(exynos_camera, v4l2_id, V4L2_CID_OVLY_MODE, FIMC_OVLY_NONE_MULTI_BUF);
+	if (rc < 0) {
+		ALOGE("%s: Unable to set overlay mode", __func__);
+		return -1;
+	}
+
+	output->initialized = 1;
+
+	return 0;
+}
+
 int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 	struct exynos_v4l2_output *output)
 {
@@ -60,6 +126,9 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 		return -1;
 	}
 
+	memory_address = output->mem_base_address;
+	memory_size = output->reserved_mem_size;
+
 	width = output->width;
 	height = output->height;
 	format = output->format;
@@ -77,48 +146,6 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 	}
 
 	buffer_length = exynos_camera_buffer_length(width, height, format);
-
-	rc = exynos_v4l2_open(exynos_camera, v4l2_id);
-	if (rc < 0) {
-		ALOGE("%s: Unable to open v4l2 device", __func__);
-		goto error;
-	}
-
-	rc = exynos_v4l2_querycap_out(exynos_camera, v4l2_id);
-	if (rc < 0) {
-		ALOGE("%s: Unable to query capabilities", __func__);
-		goto error;
-	}
-
-	rc = exynos_v4l2_g_fmt_out(exynos_camera, v4l2_id, NULL, NULL, NULL);
-	if (rc < 0) {
-		ALOGE("%s: Unable to get format", __func__);
-		goto error;
-	}
-
-	value = 0;
-	rc = exynos_v4l2_g_ctrl(exynos_camera, v4l2_id, V4L2_CID_RESERVED_MEM_BASE_ADDR, &value);
-	if (rc < 0) {
-		ALOGE("%s: Unable to get address", __func__);
-		goto error;
-	}
-
-	memory_address = value;
-
-	value = 0;
-	rc = exynos_v4l2_g_ctrl(exynos_camera, v4l2_id, V4L2_CID_RESERVED_MEM_SIZE, &value);
-	if (rc < 0) {
-		ALOGE("%s: Unable to get size", __func__);
-		goto error;
-	}
-
-	memory_size = value * 1024;
-
-	rc = exynos_v4l2_s_ctrl(exynos_camera, v4l2_id, V4L2_CID_OVLY_MODE, FIMC_OVLY_NONE_MULTI_BUF);
-	if (rc < 0) {
-		ALOGE("%s: Unable to set overlay mode", __func__);
-		goto error;
-	}
 
 	rc = exynos_v4l2_s_fmt_pix_out(exynos_camera, v4l2_id, buffer_width, buffer_height, buffer_format, 0);
 	if (rc < 0) {
@@ -269,7 +296,8 @@ int exynos_v4l2_output(struct exynos_camera *exynos_camera,
 	struct exynos_v4l2_output *output, int buffer_address)
 {
 	struct fimc_buf fimc_buffer;
-	void *fb_base;
+	//void *fb_base;
+	struct v4l2_framebuffer fbuf;
 	int width, height, format;
 	int buffer_width, buffer_height, buffer_format;
 	int buffer_length;
@@ -298,13 +326,28 @@ int exynos_v4l2_output(struct exynos_camera *exynos_camera,
 	buffer_length = output->buffer_length;
 	v4l2_id = output->v4l2_id;
 
-	rc = exynos_v4l2_g_fbuf(exynos_camera, v4l2_id, &fb_base, NULL, NULL, NULL);
+	rc = exynos_v4l2_g_fbuf(exynos_camera, v4l2_id, &fbuf);
 	if (rc < 0) {
 		ALOGE("%s: Unable to get fbuf", __func__);
 		goto error;
 	}
 
-	rc = exynos_v4l2_s_fbuf(exynos_camera, v4l2_id, fb_base, width, height, format);
+	// When setting up fimc3, take base memory address from fimc1
+	if (output->v4l2_id == 3) {
+		fbuf.base            = (void *)exynos_camera->preview_output.memory_address;
+		fbuf.fmt.width       = buffer_width;
+		fbuf.fmt.height      = buffer_height;
+		fbuf.fmt.pixelformat = buffer_format;
+	} else {
+		fbuf.base            = (void *) output->memory_address;
+		fbuf.fmt.width       = buffer_width;
+		fbuf.fmt.height      = buffer_height;
+		fbuf.fmt.pixelformat = buffer_format;
+	}
+
+	//ALOGE("%s v4l2_id=%d fbuf.base=0x%x buffer_length=%d", __func__, v4l2_id, fbuf.base, output->buffer_length);
+
+	rc = exynos_v4l2_s_fbuf(exynos_camera, v4l2_id, &fbuf, width, height, format);
 	if (rc < 0) {
 		ALOGE("%s: Unable to set fbuf", __func__);
 		goto error;
@@ -315,6 +358,10 @@ int exynos_v4l2_output(struct exynos_camera *exynos_camera,
 	address = output->memory_address + buffer_length * output->memory_index;
 
 	exynos_camera_yuv_planes(width, height, format, address, (int *) &fimc_buffer.base[0], (int *) &fimc_buffer.base[1], (int *) &fimc_buffer.base[2]);
+
+	fimc_buffer.length[0] = 4;
+	fimc_buffer.length[1] = 1074842273;
+
 
 	rc = exynos_v4l2_s_ctrl(exynos_camera, v4l2_id, V4L2_CID_DST_INFO, (int) &fimc_buffer);
 	if (rc < 0) {

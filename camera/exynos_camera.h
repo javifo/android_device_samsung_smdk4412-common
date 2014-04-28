@@ -27,6 +27,8 @@
 
 #include <linux/s5c73m3.h>
 
+#include <linux/exynos_mem.h>
+
 #ifdef EXYNOS_JPEG_HW
 #include <jpeg_hal.h>
 #endif
@@ -41,8 +43,8 @@
 #define EXYNOS_CAMERA_MAX_V4L2_NODES_COUNT	4
 
 #define EXYNOS_CAMERA_CAPTURE_BUFFERS_COUNT	6
-#define EXYNOS_CAMERA_PREVIEW_BUFFERS_COUNT	6
-#define EXYNOS_CAMERA_RECORDING_BUFFERS_COUNT	6
+#define EXYNOS_CAMERA_PREVIEW_BUFFERS_COUNT	1
+#define EXYNOS_CAMERA_RECORDING_BUFFERS_COUNT	1
 #define EXYNOS_CAMERA_GRALLOC_BUFFERS_COUNT	3
 
 #define EXYNOS_CAMERA_PICTURE_OUTPUT_FORMAT	V4L2_PIX_FMT_YUYV
@@ -51,6 +53,7 @@
 #define EXYNOS_CAMERA_CALLBACK_DEFINED(cb) (exynos_camera->callbacks.cb != NULL)
 
 #define EXYNOS_CAMERA_ALIGN(value) ((value + (0x10000 - 1)) & ~(0x10000 - 1))
+#define ALIGN(x, a)       (((x) + (a) - 1) & ~((a) - 1))
 
 /*
  * Structures
@@ -213,6 +216,7 @@ struct exynos_v4l2_node {
 };
 
 struct exynos_v4l2_output {
+	int initialized;
 	int enabled;
 
 	int v4l2_id;
@@ -225,6 +229,8 @@ struct exynos_v4l2_output {
 	int buffer_height;
 	int buffer_format;
 
+	unsigned int mem_base_address;
+	int reserved_mem_size;
 	camera_memory_t *memory;
 	int memory_address;
 #ifdef EXYNOS_ION
@@ -654,9 +660,9 @@ int exynos_v4l2_s_crop_cap(struct exynos_camera *exynos_camera,
 int exynos_v4l2_s_crop_out(struct exynos_camera *exynos_camera,
 	int exynos_v4l2_id, int left, int top, int width, int height);
 int exynos_v4l2_g_fbuf(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
-	void **base, int *width, int *height, int *fmt);
+	struct v4l2_framebuffer *framebuffer);
 int exynos_v4l2_s_fbuf(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
-	void *base, int width, int height, int fmt);
+	struct v4l2_framebuffer *base, int width, int height, int fmt);
 
 /*
  * V4L2 Output
