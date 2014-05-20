@@ -70,6 +70,7 @@ PRODUCT_PACKAGES := \
     com.android.future.usb.accessory \
     gralloc.exynos4 \
     hwcomposer.exynos4 \
+    libfimc \
     libfimg \
     libnetcmdiface \
     libsecion \
