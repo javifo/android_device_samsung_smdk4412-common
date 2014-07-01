@@ -1894,7 +1894,7 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 	int value;
 	int fd;
 	int rc;
-	int i;
+	int i, field;
 
 	if (exynos_camera == NULL)
 		return -EINVAL;
@@ -1955,7 +1955,14 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 		}
 	}
 
-	rc = exynos_v4l2_s_fmt_pix_cap(exynos_camera, 0, width, height, format, V4L2_PIX_FMT_MODE_PREVIEW);
+	// Set field for VIDIOC_S_FMT type=vid-cap depending on sensor mode
+	// TODO: check whether it is still ok for front camera
+	if (exynos_camera->camera_sensor_mode == SENSOR_MOVIE)
+		field = V4L2_FIELD_NONE;
+	else
+		field = V4L2_FIELD_ANY;
+
+	rc = exynos_v4l2_s_fmt_pix_cap(exynos_camera, 0, width, height, format, field, V4L2_PIX_FMT_MODE_PREVIEW);
 	if (rc < 0) {
 		ALOGE("%s: Unable to set capture pixel format", __func__);
 		goto error;
@@ -2219,8 +2226,13 @@ int exynos_camera_capture_setup(struct exynos_camera *exynos_camera)
 
 	format = exynos_camera->camera_capture_format;
 
-	width = exynos_camera->preview_width;
-	height = exynos_camera->preview_height;
+	if (exynos_camera->camera_sensor_mode == SENSOR_MOVIE) {
+		width = exynos_camera->recording_width;
+		height = exynos_camera->recording_height;
+	} else {
+		width = exynos_camera->preview_width;
+		height = exynos_camera->preview_height;
+	}
 
 	ALOGD("%s: Selected width: %d, height: %d, format: 0x%x", __func__, width, height, format);
 

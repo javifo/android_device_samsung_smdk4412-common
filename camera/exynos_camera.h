@@ -625,7 +625,7 @@ int exynos_v4l2_s_fmt_pix(struct exynos_camera *exynos_camera,
 	int exynos_v4l2_id, int type, int width, int height, int fmt, int field,
 	int priv);
 int exynos_v4l2_s_fmt_pix_cap(struct exynos_camera *exynos_camera,
-	int exynos_v4l2_id, int width, int height, int fmt, int priv);
+	int exynos_v4l2_id, int width, int height, int fmt, int field, int priv);
 int exynos_v4l2_s_fmt_pix_out(struct exynos_camera *exynos_camera,
 	int exynos_v4l2_id, int width, int height, int fmt, int priv);
 int exynos_v4l2_s_fmt_win(struct exynos_camera *exynos_camera,

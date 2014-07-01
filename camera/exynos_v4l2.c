@@ -528,10 +528,10 @@ int exynos_v4l2_s_fmt_pix(struct exynos_camera *exynos_camera,
 }
 
 int exynos_v4l2_s_fmt_pix_cap(struct exynos_camera *exynos_camera,
-	int exynos_v4l2_id, int width, int height, int fmt, int priv)
+	int exynos_v4l2_id, int width, int height, int fmt, int field, int priv)
 {
 	return exynos_v4l2_s_fmt_pix(exynos_camera, exynos_v4l2_id, V4L2_BUF_TYPE_VIDEO_CAPTURE,
-		width, height, fmt, V4L2_FIELD_NONE, priv);
+		width, height, fmt, field, priv);
 }
 
 int exynos_v4l2_s_fmt_pix_out(struct exynos_camera *exynos_camera,
