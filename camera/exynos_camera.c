@@ -2256,7 +2256,7 @@ int exynos_camera_capture_setup(struct exynos_camera *exynos_camera)
 int exynos_camera_preview_output_start(struct exynos_camera *exynos_camera)
 {
 	struct exynos_v4l2_output *output;
-	int rc;
+	int rc, exynos_mem_fd;
 
 	if (exynos_camera == NULL)
 		return -EINVAL;
@@ -2268,6 +2268,7 @@ int exynos_camera_preview_output_start(struct exynos_camera *exynos_camera)
 		return -1;
 	}
 
+	// Init FIMC1
 	output = &exynos_camera->preview_output;
 
 	memset(output, 0, sizeof(struct exynos_v4l2_output));
@@ -2285,6 +2286,40 @@ int exynos_camera_preview_output_start(struct exynos_camera *exynos_camera)
 		ALOGE("%s: Unable to init preview output FIMC1", __func__);
 		goto error;
 	}
+
+	if (exynos_camera->camera_sensor_mode == SENSOR_MOVIE) {
+		// Init FIMC3
+		output = &exynos_camera->recording_output;
+
+		// moved from exynos_camera_recording_output_start() here
+		memset(output, 0, sizeof(struct exynos_v4l2_output));
+		output->v4l2_id = 3;
+		output->width = exynos_camera->recording_width;
+		output->height = exynos_camera->recording_height;
+		output->format = exynos_camera->recording_format;
+
+		rc = exynos_fimc_init(exynos_camera, output);
+		if (rc < 0) {
+			ALOGE("%s: Unable to init recording output FIMC3", __func__);
+			goto error; //TODO - check what to do. deinit or something similar
+		}
+	}
+
+	// Setup exynos-mem
+	exynos_mem_fd = open("/dev/exynos-mem", O_RDWR);
+	if (exynos_mem_fd < 0) {
+		ALOGE("ERR(%s): /dev/exynos-mem open failed\n", __func__);
+		goto error;
+	}
+
+	rc = ioctl(exynos_mem_fd, EXYNOS_MEM_SET_PHYADDR, (unsigned int) &exynos_camera->preview_output.mem_base_address);
+	if (rc < 0) {
+		ALOGE("%s: Unable to set /dev/exynos-mem phy address", __func__);
+		goto error; //TODO - check what to do. deinit or something similar
+	}
+
+	// Start preview
+	output = &exynos_camera->preview_output;
 
 	rc = exynos_v4l2_output_start(exynos_camera, output);
 	if (rc < 0) {
@@ -2880,11 +2915,12 @@ int exynos_camera_recording_output_start(struct exynos_camera *exynos_camera)
 
 	output = &exynos_camera->recording_output;
 
+	/* moved to exynos_camera_preview_output_start()
 	memset(output, 0, sizeof(struct exynos_v4l2_output));
 	output->v4l2_id = 3;
 	output->width = exynos_camera->recording_width;
 	output->height = exynos_camera->recording_height;
-	output->format = exynos_camera->recording_format;
+	output->format = exynos_camera->recording_format; */
 	output->buffer_width = exynos_camera->recording_buffer.width;
 	output->buffer_height = exynos_camera->recording_buffer.height;
 	output->buffer_format = exynos_camera->recording_buffer.format;

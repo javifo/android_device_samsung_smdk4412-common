@@ -27,6 +27,8 @@
 
 #include <linux/s5c73m3.h>
 
+#include <linux/exynos_mem.h>
+
 #ifdef EXYNOS_JPEG_HW
 #include <jpeg_hal.h>
 #endif
