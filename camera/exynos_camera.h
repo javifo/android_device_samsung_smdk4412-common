@@ -41,8 +41,8 @@
 #define EXYNOS_CAMERA_MAX_V4L2_NODES_COUNT	4
 
 #define EXYNOS_CAMERA_CAPTURE_BUFFERS_COUNT	6
-#define EXYNOS_CAMERA_PREVIEW_BUFFERS_COUNT	6
-#define EXYNOS_CAMERA_RECORDING_BUFFERS_COUNT	6
+#define EXYNOS_CAMERA_PREVIEW_BUFFERS_COUNT	1
+#define EXYNOS_CAMERA_RECORDING_BUFFERS_COUNT	1
 #define EXYNOS_CAMERA_GRALLOC_BUFFERS_COUNT	3
 
 #define EXYNOS_CAMERA_PICTURE_OUTPUT_FORMAT	V4L2_PIX_FMT_YUYV
@@ -224,6 +224,9 @@ struct exynos_v4l2_output {
 	int buffer_width;
 	int buffer_height;
 	int buffer_format;
+
+	unsigned int mem_base_address;
+	int reserved_mem_size;
 
 	camera_memory_t *memory;
 	int memory_address;

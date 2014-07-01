@@ -2280,6 +2280,12 @@ int exynos_camera_preview_output_start(struct exynos_camera *exynos_camera)
 	output->buffer_format = exynos_camera->preview_buffer.format;
 	output->buffers_count = EXYNOS_CAMERA_PREVIEW_BUFFERS_COUNT;
 
+	rc = exynos_fimc_init(exynos_camera, output);
+	if (rc < 0) {
+		ALOGE("%s: Unable to init preview output FIMC1", __func__);
+		goto error;
+	}
+
 	rc = exynos_v4l2_output_start(exynos_camera, output);
 	if (rc < 0) {
 		ALOGE("%s: Unable to start preview output", __func__);
