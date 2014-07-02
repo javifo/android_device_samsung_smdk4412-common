@@ -1976,7 +1976,7 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 			goto error;
 		}
 
-		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CACHEABLE, 0);
+		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CACHEABLE, 1);
 		if (rc < 0) {
 			ALOGE("%s: Unable to set cacheable", __func__);
 			goto error;
