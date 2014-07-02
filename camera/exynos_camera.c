@@ -2696,6 +2696,13 @@ void *exynos_camera_picture(void *data)
 		output.buffer_format = buffer_format;
 		output.buffers_count = 1;
 
+		// Init FIMC2
+		rc = exynos_fimc_init(exynos_camera, &output);
+		if (rc < 0) {
+			ALOGE("%s: Unable to init picture output FIMC2", __func__);
+			goto error;
+		}
+
 		rc = exynos_v4l2_output_start(exynos_camera, &output);
 		if (rc < 0) {
 			ALOGE("%s: Unable to start thumbnail picture output", __func__);
