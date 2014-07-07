@@ -1968,6 +1968,8 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 		goto error;
 	}
 
+	exynos_camera->exynos_mem_fd = exynos_mem_fd;
+
 	rc = ioctl(exynos_mem_fd, EXYNOS_MEM_SET_PHYADDR, (unsigned int) &exynos_camera->preview_output.mem_base_address);
 	if (rc < 0) {
 		ALOGE("%s: Unable to set /dev/exynos-mem phy address", __func__);
@@ -2065,7 +2067,7 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 	buffers_count = rc;
 	ALOGD("Found %d buffers available for capture!", buffers_count);
 
-	memset(&fps_param, 0, sizeof(fps_param));
+	/* memset(&fps_param, 0, sizeof(fps_param));
 	fps_param.parm.capture.timeperframe.numerator = 1;
 	fps_param.parm.capture.timeperframe.denominator = exynos_camera->preview_fps;
 
@@ -2073,7 +2075,12 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 	if (rc < 0) {
 		ALOGE("%s: Unable to set fps", __func__);
 		goto error;
-	}
+	} */
+
+	// now its time to map FIMC1 memory
+	unsigned int size = mbus_width * mbus_height * 4; //TODO: detect where that 4 comes from
+
+	exynos_camera->preview_output.memory_address = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, exynos_mem_fd, 0);
 
 	for (i = 0; i < buffers_count; i++) {
 		rc = exynos_v4l2_querybuf_cap(exynos_camera, 0, i);

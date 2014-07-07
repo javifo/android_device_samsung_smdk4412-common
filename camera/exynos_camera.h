@@ -307,6 +307,9 @@ struct exynos_camera {
 
 	gralloc_module_t *gralloc;
 
+	// /dev/exynos-mem
+	int exynos_mem_fd;
+
 	// Capture
 
 	pthread_t capture_thread;
