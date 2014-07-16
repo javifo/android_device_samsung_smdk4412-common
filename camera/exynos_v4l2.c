@@ -168,6 +168,7 @@ int exynos_v4l2_poll(struct exynos_camera *exynos_camera, int exynos_v4l2_id)
 	struct pollfd events;
 	int fd;
 	int rc;
+	int max_retry = 100;
 
 	if (exynos_camera == NULL)
 		return -EINVAL;
@@ -182,9 +183,14 @@ int exynos_v4l2_poll(struct exynos_camera *exynos_camera, int exynos_v4l2_id)
 	events.fd = fd;
 	events.events = POLLIN | POLLERR;
 
-	rc = poll(&events, 1, 1000);
-	if (rc < 0 || events.revents & POLLERR)
-		return -1;
+	while (max_retry-- > 0) {
+//		ALOGD("%s: v4l2_id=%d max_retry=%d", __func__, exynos_v4l2_id, max_retry);
+		rc = poll(&events, 1, 20);
+		if (rc < 0 || events.revents & POLLERR)
+			return -1;
+		else if (rc > 0)
+			return rc;
+	}
 
 	return rc;
 }
