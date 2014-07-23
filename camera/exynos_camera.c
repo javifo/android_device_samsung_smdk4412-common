@@ -1920,6 +1920,15 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 			ALOGE("%s: Unable to set hybrid", __func__);
 			goto error;
 		}
+
+		// Set jpeg resolution and quality
+		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_JPEG_RESOLUTION, (exynos_camera->picture_width & 0xffff) << 16 | (exynos_camera->picture_height & 0xffff));
+		if (rc < 0)
+			ALOGE("%s: Unable to set jpeg resolution", __func__);
+
+		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAM_JPEG_QUALITY, exynos_camera->jpeg_quality);
+		if (rc < 0)
+			ALOGE("%s: Unable to set jpeg quality", __func__);
 	} else {
 		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_IS_S_FORMAT_SCENARIO, exynos_camera->fimc_is_mode);
 		if (rc < 0) {
@@ -1959,22 +1968,24 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 			ALOGE("%s: Unable to init recording output FIMC3", __func__);
 			goto error; //TODO - check what to do. deinit or something similar
 		}
+
+		// Setup exynos-mem. TODO: detect whether it depends on front/back camera and/or movie/picture mode
+		exynos_mem_fd = open("/dev/exynos-mem", O_RDWR);
+		if (exynos_mem_fd < 0) {
+			ALOGE("ERR(%s): /dev/exynos-mem open failed\n", __func__);
+			goto error;
+		}
+
+		exynos_camera->exynos_mem_fd = exynos_mem_fd;
+
+		rc = ioctl(exynos_mem_fd, EXYNOS_MEM_SET_PHYADDR, (unsigned int) &exynos_camera->preview_output.mem_base_address);
+		if (rc < 0) {
+			ALOGE("%s: Unable to set /dev/exynos-mem phy address", __func__);
+			goto error; //TODO - check what to do. deinit or something similar
+		}
 	}
 
-	// Setup exynos-mem
-	exynos_mem_fd = open("/dev/exynos-mem", O_RDWR);
-	if (exynos_mem_fd < 0) {
-		ALOGE("ERR(%s): /dev/exynos-mem open failed\n", __func__);
-		goto error;
-	}
-
-	exynos_camera->exynos_mem_fd = exynos_mem_fd;
-
-	rc = ioctl(exynos_mem_fd, EXYNOS_MEM_SET_PHYADDR, (unsigned int) &exynos_camera->preview_output.mem_base_address);
-	if (rc < 0) {
-		ALOGE("%s: Unable to set /dev/exynos-mem phy address", __func__);
-		goto error; //TODO - check what to do. deinit or something similar
-	}
+	// Start hybrid preview
 
 	rc = exynos_v4l2_enum_fmt_cap(exynos_camera, 0, format);
 	if (rc < 0) {
@@ -2077,6 +2088,8 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 		goto error;
 	} */
 
+	// Allocate interleaved post heap
+
 	// now its time to map FIMC1 memory
 	unsigned int size = mbus_width * mbus_height * 4; //TODO: detect where that 4 comes from
 
@@ -2092,6 +2105,7 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 
 	buffer_length = rc;
 
+	//vvvv TODO - Move elsewhere. It is not in stock here vvvv
 	value = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_PADDR_Y, 0);
 	if (value == 0 || value == (int) 0xffffffff) {
 		ALOGE("%s: Unable to get address", __func__);
@@ -2099,6 +2113,7 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 	}
 
 	exynos_camera->capture_memory_address = value;
+	//^^^^ TODO - Move elsewhere. It is not in stock here ^^^^
 
 	if (EXYNOS_CAMERA_CALLBACK_DEFINED(request_memory)) {
 		fd = exynos_v4l2_fd(exynos_camera, 0);
@@ -2398,7 +2413,7 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 	if (exynos_camera == NULL)
 		goto error;
 
-//     ALOGD("%s()", __func__);
+    //ALOGD("%s() memory_index=%d buffer_length=%d", __func__, exynos_camera->preview_output.memory_index, exynos_camera->preview_output.buffer_length);
 
 	width = exynos_camera->preview_width;
 	height = exynos_camera->preview_height;
