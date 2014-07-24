@@ -2089,11 +2089,27 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 	} */
 
 	// Allocate interleaved post heap
+	if (EXYNOS_CAMERA_CALLBACK_DEFINED(request_memory)) {
+		exynos_camera->capture_memory = NULL;
 
-	// now its time to map FIMC1 memory
-	unsigned int size = mbus_width * mbus_height * 4; //TODO: detect where that 4 comes from
+		buffer_length = exynos_camera_buffer_length(exynos_camera->preview_width, exynos_camera->preview_height, exynos_camera->preview_format);
 
-	exynos_camera->preview_output.memory_address = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, exynos_mem_fd, 0);
+		ALOGD("%s Requesting interleaved buffers buffer_length=%x buffers_count=%d", __func__, buffer_length, buffers_count);
+		memory = exynos_camera->callbacks.request_memory(exynos_mem_fd, buffer_length, buffers_count, exynos_camera->callbacks.user);
+		if (memory == NULL || memory->data == NULL || memory->data == MAP_FAILED) {
+			ALOGE("%s: Unable to request memory", __func__);
+			goto error;
+		}
+
+		exynos_camera->capture_memory = memory;
+
+		memory = exynos_camera->callbacks.request_memory(-1, 1, 1, exynos_camera->callbacks.user);
+
+		exynos_camera->face_data = memory;
+	} else {
+		ALOGE("%s: No memory request function!", __func__);
+		goto error;
+	}
 
 	for (i = 0; i < buffers_count; i++) {
 		rc = exynos_v4l2_querybuf_cap(exynos_camera, 0, i);
@@ -2114,31 +2130,6 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 
 	exynos_camera->capture_memory_address = value;
 	//^^^^ TODO - Move elsewhere. It is not in stock here ^^^^
-
-	if (EXYNOS_CAMERA_CALLBACK_DEFINED(request_memory)) {
-		fd = exynos_v4l2_fd(exynos_camera, 0);
-		if (fd < 0) {
-			ALOGE("%s: Unable to get v4l2 fd for id %d", __func__, 0);
-			goto error;
-		}
-
-		exynos_camera->capture_memory = NULL;
-
-		memory = exynos_camera->callbacks.request_memory(fd, buffer_length, buffers_count, exynos_camera->callbacks.user);
-		if (memory == NULL || memory->data == NULL || memory->data == MAP_FAILED) {
-			ALOGE("%s: Unable to request memory", __func__);
-			goto error;
-		}
-
-		exynos_camera->capture_memory = memory;
-
-		memory = exynos_camera->callbacks.request_memory(-1, 1, 1, exynos_camera->callbacks.user);
-
-		exynos_camera->face_data = memory;
-	} else {
-		ALOGE("%s: No memory request function!", __func__);
-		goto error;
-	}
 
 	if (!exynos_camera->camera_fimc_is) {
 		exynos_camera->capture_yuv_buffer = malloc(buffer_length);
