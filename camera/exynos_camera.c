@@ -2195,6 +2195,22 @@ int exynos_camera_capture_start(struct exynos_camera *exynos_camera)
 		}
 	}
 
+	// Set FIMC3
+	if (exynos_camera->camera_sensor_mode == SENSOR_MOVIE) {
+		output = &exynos_camera->recording_output;
+
+		output->buffer_width = exynos_camera->recording_width;
+		output->buffer_height = exynos_camera->recording_height;
+		output->buffer_format = V4L2_PIX_FMT_UYVY;
+		output->buffers_count = EXYNOS_CAMERA_RECORDING_BUFFERS_COUNT;
+
+		rc = exynos_v4l2_output_start(exynos_camera, output);
+		if (rc < 0) {
+			ALOGE("%s: Unable to start recording output", __func__);
+			goto error;
+		}
+	}
+
 	exynos_camera->capture_enabled = 1;
 	pthread_mutex_unlock(&exynos_camera->capture_lock_mutex);
 
@@ -2947,25 +2963,6 @@ int exynos_camera_recording_output_start(struct exynos_camera *exynos_camera)
 	if (exynos_camera->recording_output_enabled) {
 		ALOGE("Recording was already started!");
 		return -1;
-	}
-
-	output = &exynos_camera->recording_output;
-
-	/* moved to exynos_camera_preview_output_start()
-	memset(output, 0, sizeof(struct exynos_v4l2_output));
-	output->v4l2_id = 3;
-	output->width = exynos_camera->recording_width;
-	output->height = exynos_camera->recording_height;
-	output->format = exynos_camera->recording_format; */
-	output->buffer_width = exynos_camera->recording_buffer.width;
-	output->buffer_height = exynos_camera->recording_buffer.height;
-	output->buffer_format = exynos_camera->recording_buffer.format;
-	output->buffers_count = EXYNOS_CAMERA_RECORDING_BUFFERS_COUNT;
-
-	rc = exynos_v4l2_output_start(exynos_camera, output);
-	if (rc < 0) {
-		ALOGE("%s: Unable to start recording output", __func__);
-		goto error;
 	}
 
 	exynos_camera->recording_output_enabled = 1;
