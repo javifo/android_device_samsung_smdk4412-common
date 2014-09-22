@@ -22,6 +22,8 @@
 #include <malloc.h>
 #include <ctype.h>
 
+#define BITS_PER_LONG 32 /* needed for ION_EXYNOS_NONCACHE_MASK */
+
 #include <linux/ion.h>
 
 #define LOG_TAG "exynos_ion"
@@ -77,7 +79,7 @@ int exynos_ion_alloc(struct exynos_camera *exynos_camera, int size)
 	memset(&alloc_data, 0, sizeof(alloc_data));
 	alloc_data.len = size;
 	alloc_data.align = page_size;
-	alloc_data.flags = ION_HEAP_EXYNOS_CONTIG_MASK;
+	alloc_data.flags = ION_EXYNOS_NONCACHE_MASK | ION_HEAP_EXYNOS_CONTIG_MASK;
 
 	rc = ioctl(fd, ION_IOC_ALLOC, &alloc_data);
 	if (rc < 0)

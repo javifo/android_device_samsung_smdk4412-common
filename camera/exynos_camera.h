@@ -45,7 +45,7 @@
 #define EXYNOS_CAMERA_CAPTURE_BUFFERS_COUNT	6
 #define EXYNOS_CAMERA_PREVIEW_BUFFERS_COUNT	1
 #define EXYNOS_CAMERA_RECORDING_BUFFERS_COUNT	1
-#define EXYNOS_CAMERA_GRALLOC_BUFFERS_COUNT	3
+#define EXYNOS_CAMERA_GRALLOC_BUFFERS_COUNT	6
 
 #define EXYNOS_CAMERA_PICTURE_OUTPUT_FORMAT	V4L2_PIX_FMT_YUYV
 
@@ -57,6 +57,13 @@
 /*
  * Structures
  */
+
+struct drv_buffer{
+	int           index;
+	unsigned int  length;
+	unsigned int  offset; // Offset
+	void         *vaddr;  // Mapped address into user space
+};
 
 struct exynos_camera;
 
@@ -238,6 +245,8 @@ struct exynos_v4l2_output {
 	int memory_index;
 	int buffers_count;
 	int buffer_length;
+
+	bool fimc_src_params_set;
 };
 
 struct exynos_exif {
@@ -330,6 +339,8 @@ struct exynos_camera {
 	int capture_format;
 	int capture_buffers_count;
 	int capture_buffer_length;
+
+	struct drv_buffer *capture_buffer;
 
 	// Preview
 	int preview_enabled;
@@ -560,6 +571,7 @@ void list_head_remove(struct list_head *list);
 
 int exynos_camera_buffer_length(int width, int height, int format);
 void exynos_camera_yuv_planes(int width, int height, int format, int address, int *address_y, int *address_cb, int *address_cr);
+int exynos_v4l2_paddr_yuv(struct exynos_camera *exynos_camera, int buffer_index, unsigned int *y, unsigned int *cbcr);
 
 /*
  * V4L2
@@ -595,9 +607,9 @@ int exynos_v4l2_reqbufs_cap(struct exynos_camera *exynos_camera,
 int exynos_v4l2_reqbufs_out(struct exynos_camera *exynos_camera,
 	int exynos_v4l2_id, int count);
 int exynos_v4l2_querybuf(struct exynos_camera *exynos_camera,
-	int exynos_v4l2_id, int type, int memory, int index);
+	int exynos_v4l2_id, int type, int memory, int index, int *last_buf_length, int *last_buf_offset);
 int exynos_v4l2_querybuf_cap(struct exynos_camera *exynos_camera,
-	int exynos_v4l2_id, int index);
+	int exynos_v4l2_id, int index, int *last_buf_length, int *last_buf_offset);
 int exynos_v4l2_querybuf_out(struct exynos_camera *exynos_camera,
 	int exynos_v4l2_id, int index);
 int exynos_v4l2_querycap(struct exynos_camera *exynos_camera,
@@ -662,14 +674,16 @@ int exynos_v4l2_s_crop_cap(struct exynos_camera *exynos_camera,
 int exynos_v4l2_s_crop_out(struct exynos_camera *exynos_camera,
 	int exynos_v4l2_id, int left, int top, int width, int height);
 int exynos_v4l2_g_fbuf(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
-	void **base, int *width, int *height, int *fmt);
+	void **base, int *width, int *height, int *fmt, int *colorspace);
 int exynos_v4l2_s_fbuf(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
-	void *base, int width, int height, int fmt);
+	void *base, int width, int height, int fmt, int colorspace);
 
 /*
  * V4L2 Output
  */
 
+int exynos_fimc_init(struct exynos_camera *exynos_camera,
+	struct exynos_v4l2_output *output);
 int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 	struct exynos_v4l2_output *output);
 void exynos_v4l2_output_stop(struct exynos_camera *exynos_camera,

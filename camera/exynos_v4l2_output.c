@@ -109,7 +109,7 @@ int exynos_fimc_init(struct exynos_camera *exynos_camera,
 int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 	struct exynos_v4l2_output *output)
 {
-	int width, height, format;
+	int width, height, format, colorspace;
 	int buffer_width, buffer_height, buffer_format;
 	camera_memory_t *memory = NULL;
 	int memory_address, memory_size;
@@ -122,6 +122,9 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 	int fd;
 	int rc;
 	int i;
+	void *fb_base;
+	struct fimc_buf fimc_buffer;
+	int address = 0;
 
 	if (exynos_camera == NULL || output == NULL)
 		return -EINVAL;
@@ -154,13 +157,27 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 
 	buffer_length = exynos_camera_buffer_length(width, height, format);
 
-	rc = exynos_v4l2_s_fmt_pix_out(exynos_camera, v4l2_id, buffer_width, buffer_height, buffer_format, 0);
+	if (output->fimc_src_params_set == true) {
+		// Clear buffer
+		rc = exynos_v4l2_reqbufs_out(exynos_camera, v4l2_id, 0);
+		if (rc < 0) {
+			exynos_v4l2_streamoff_out(exynos_camera, 0);
+			rc = exynos_v4l2_reqbufs_out(exynos_camera, v4l2_id, 0);
+			if (rc < 0) {
+				ALOGE("%s: Unable to clear buffers", __func__);
+				goto error;
+			}
+		}
+	}
+
+	// Set src
+	rc = exynos_v4l2_s_fmt_pix_out(exynos_camera, v4l2_id, width, height, buffer_format, 0); /* TODO - check fimc3 formats. Also check picture mode */
 	if (rc < 0) {
 		ALOGE("%s: Unable to set output pixel format!", __func__);
 		goto error;
 	}
 
-	rc = exynos_v4l2_s_crop_out(exynos_camera, v4l2_id, 0, 0, buffer_width, buffer_height);
+	rc = exynos_v4l2_s_crop_out(exynos_camera, v4l2_id, 0, 0, width, height);
 	if (rc < 0) {
 		ALOGE("%s: Unable to crop", __func__);
 		goto error;
@@ -172,7 +189,67 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 		goto error;
 	}
 
-	if (memory_address != 0 && memory_address != (int) 0xffffffff && memory_size >= buffer_length) {
+	output->fimc_src_params_set = true;
+
+	// Set dst
+	//ALOGD("%s rotation=%d hflip=%d vflip=%d", __func__, exynos_camera->camera_rotation, exynos_camera->camera_hflip, exynos_camera->camera_vflip);
+
+	/* TODO - check if this is also here for picture mode */
+	rc = exynos_v4l2_s_ctrl(exynos_camera, v4l2_id, V4L2_CID_ROTATION, exynos_camera->camera_rotation);
+	if (rc < 0) {
+		ALOGE("%s: Unable to set rotation", __func__);
+		goto error;
+	}
+
+	rc = exynos_v4l2_s_ctrl(exynos_camera, v4l2_id, V4L2_CID_HFLIP, exynos_camera->camera_hflip);
+	if (rc < 0) {
+		ALOGE("%s: Unable to set hflip", __func__);
+		goto error;
+	}
+
+	rc = exynos_v4l2_s_ctrl(exynos_camera, v4l2_id, V4L2_CID_VFLIP, exynos_camera->camera_vflip);
+	if (rc < 0) {
+		ALOGE("%s: Unable to set vflip", __func__);
+		goto error;
+	}
+
+	/* TODO - check whether this is the same for picture mode */
+	if (exynos_camera->camera_sensor_mode == SENSOR_MOVIE) {
+		rc = exynos_v4l2_g_fbuf(exynos_camera, v4l2_id, &fb_base, NULL, NULL, NULL, &colorspace);
+		if (rc < 0) {
+			ALOGE("%s: Unable to get fbuf", __func__);
+			goto error;
+		}
+
+		fb_base = output->mem_base_address;
+
+		rc = exynos_v4l2_s_fbuf(exynos_camera, v4l2_id, fb_base, buffer_width, buffer_height, format, colorspace); //are format and buffer_format interchanged for fimc3???
+		if (rc < 0) {
+			ALOGE("%s: Unable to set fbuf", __func__);
+			goto error;
+		}
+
+		memset(&fimc_buffer, 0, sizeof(fimc_buffer));
+
+		address = output->mem_base_address;
+
+		exynos_camera_yuv_planes(width, height, buffer_format, address, (int *) &fimc_buffer.base[0], (int *) &fimc_buffer.base[1], (int *) &fimc_buffer.base[2]);
+
+		ALOGD("%s before V4L2_CID_DST_INFO    address=0x%x  buffer_format=%d  fimc_buffer.base[0]=0x%x  fimc_buffer.base[1]=0x%x  fimc_buffer.base[2]=0x%x  ",__func__, address, buffer_format, fimc_buffer.base[0], fimc_buffer.base[1], fimc_buffer.base[2]);
+		rc = exynos_v4l2_s_ctrl(exynos_camera, v4l2_id, V4L2_CID_DST_INFO, (int) &fimc_buffer);
+		if (rc < 0) {
+			ALOGE("%s: Unable to set dst info", __func__);
+			goto error;
+		}
+
+		rc = exynos_v4l2_s_fmt_win(exynos_camera, v4l2_id, 0, 0, buffer_width, buffer_height);
+		if (rc < 0) {
+			ALOGE("%s: Unable to set overlay", __func__);
+			goto error;
+		}
+	}
+
+	/* if (0 && memory_address != 0 && memory_address != (int) 0xffffffff && memory_size >= buffer_length) {
 		for (i = buffers_count; i > 0; i--) {
 			if (buffer_length * i < memory_size)
 				break;
@@ -183,7 +260,7 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 			goto error;
 
 		buffers_count = i;
-		ALOGD("Found %d buffers available for output!", buffers_count);
+		ALOGD("%s - v4l2_id=%d - Found %d buffers available for output!", __func__, v4l2_id, buffers_count);
 
 		if (EXYNOS_CAMERA_CALLBACK_DEFINED(request_memory)) {
 			fd = exynos_v4l2_fd(exynos_camera, v4l2_id);
@@ -201,7 +278,7 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 			ALOGE("%s: No memory request function!", __func__);
 			goto error;
 		}
-	} else {
+	} else { */
 #ifdef EXYNOS_ION
 		memory_ion_fd = exynos_ion_alloc(exynos_camera, buffers_count * buffer_length);
 		if (memory_ion_fd < 0) {
@@ -225,7 +302,7 @@ int exynos_v4l2_output_start(struct exynos_camera *exynos_camera,
 		ALOGE("%s: Unable to find memory", __func__);
 		goto error;
 #endif
-	}
+	/*}*/
 
 	output->memory = memory;
 	output->memory_address = memory_address;
@@ -280,7 +357,7 @@ void exynos_v4l2_output_stop(struct exynos_camera *exynos_camera,
 
 	rc = exynos_v4l2_reqbufs_out(exynos_camera, v4l2_id, 0);
 	if (rc < 0)
-		ALOGE("%s: Unable to request buffers", __func__);
+		ALOGE("%s: Unable to clear buffers", __func__);
 
 	if (output->memory != NULL && output->memory->release != NULL) {
 		output->memory->release(output->memory);
@@ -304,7 +381,7 @@ int exynos_v4l2_output(struct exynos_camera *exynos_camera,
 {
 	struct fimc_buf fimc_buffer;
 	void *fb_base;
-	int width, height, format;
+	int width, height, format, colorspace;
 	int buffer_width, buffer_height, buffer_format;
 	int buffer_length;
 	int address;
@@ -332,16 +409,19 @@ int exynos_v4l2_output(struct exynos_camera *exynos_camera,
 	buffer_length = output->buffer_length;
 	v4l2_id = output->v4l2_id;
 
-	rc = exynos_v4l2_g_fbuf(exynos_camera, v4l2_id, &fb_base, NULL, NULL, NULL);
-	if (rc < 0) {
-		ALOGE("%s: Unable to get fbuf", __func__);
-		goto error;
-	}
+	/* TODO - check whether to move it to exynos_v4l2_output_start() for picture mode */
+	if (exynos_camera->camera_sensor_mode == SENSOR_CAMERA) {
+		rc = exynos_v4l2_g_fbuf(exynos_camera, v4l2_id, &fb_base, NULL, NULL, NULL, &colorspace);
+		if (rc < 0) {
+			ALOGE("%s: Unable to get fbuf", __func__);
+			goto error;
+		}
 
-	rc = exynos_v4l2_s_fbuf(exynos_camera, v4l2_id, fb_base, width, height, format);
-	if (rc < 0) {
-		ALOGE("%s: Unable to set fbuf", __func__);
-		goto error;
+		rc = exynos_v4l2_s_fbuf(exynos_camera, v4l2_id, fb_base, width, height, format, colorspace);
+		if (rc < 0) {
+			ALOGE("%s: Unable to set fbuf", __func__);
+			goto error;
+		}
 	}
 
 	memset(&fimc_buffer, 0, sizeof(fimc_buffer));

@@ -362,7 +362,7 @@ int exynos_v4l2_reqbufs_out(struct exynos_camera *exynos_camera,
 }
 
 int exynos_v4l2_querybuf(struct exynos_camera *exynos_camera,
-	int exynos_v4l2_id, int type, int memory, int index)
+	int exynos_v4l2_id, int type, int memory, int index, int *buf_length, int *buf_offset)
 {
 	struct v4l2_buffer buffer;
 	int rc;
@@ -379,21 +379,27 @@ int exynos_v4l2_querybuf(struct exynos_camera *exynos_camera,
 	if (rc < 0)
 		return rc;
 
-	return buffer.length;
+	if (buf_length)
+		*buf_length = buffer.length;
+
+	if ((buf_offset) && (memory == V4L2_MEMORY_MMAP))
+		*buf_offset = buffer.m.offset;
+
+	return 0;
 }
 
 int exynos_v4l2_querybuf_cap(struct exynos_camera *exynos_camera,
-	int exynos_v4l2_id, int index)
+	int exynos_v4l2_id, int index, int *buf_length, int *buf_offset)
 {
 	return exynos_v4l2_querybuf(exynos_camera, exynos_v4l2_id, V4L2_BUF_TYPE_VIDEO_CAPTURE,
-		V4L2_MEMORY_MMAP, index);
+		V4L2_MEMORY_MMAP, index, buf_length, buf_offset);
 }
 
 int exynos_v4l2_querybuf_out(struct exynos_camera *exynos_camera,
 	int exynos_v4l2_id, int index)
 {
 	return exynos_v4l2_querybuf(exynos_camera, exynos_v4l2_id, V4L2_BUF_TYPE_VIDEO_OUTPUT,
-		V4L2_MEMORY_USERPTR, index);
+		V4L2_MEMORY_USERPTR, index, NULL, NULL);
 }
 
 int exynos_v4l2_querycap(struct exynos_camera *exynos_camera,
@@ -776,7 +782,7 @@ int exynos_v4l2_s_crop_out(struct exynos_camera *exynos_camera,
 }
 
 int exynos_v4l2_g_fbuf(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
-	void **base, int *width, int *height, int *fmt)
+	void **base, int *width, int *height, int *fmt, int *colorspace)
 {
 	struct v4l2_framebuffer framebuffer;
 	int rc;
@@ -796,12 +802,14 @@ int exynos_v4l2_g_fbuf(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
 		*height = framebuffer.fmt.height;
 	if (fmt != NULL)
 		*fmt = framebuffer.fmt.pixelformat;
+	if (colorspace != NULL)
+		*colorspace = framebuffer.fmt.colorspace;
 
 	return 0;
 }
 
 int exynos_v4l2_s_fbuf(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
-	void *base, int width, int height, int fmt)
+	void *base, int width, int height, int fmt, int colorspace)
 {
 	struct v4l2_framebuffer framebuffer;
 	int rc;
@@ -814,7 +822,35 @@ int exynos_v4l2_s_fbuf(struct exynos_camera *exynos_camera, int exynos_v4l2_id,
 	framebuffer.fmt.width = width;
 	framebuffer.fmt.height = height;
 	framebuffer.fmt.pixelformat = fmt;
+	framebuffer.fmt.colorspace = colorspace;
 
 	rc = exynos_v4l2_ioctl(exynos_camera, exynos_v4l2_id, VIDIOC_S_FBUF, &framebuffer);
 	return rc;
+}
+
+int exynos_v4l2_paddr_yuv(struct exynos_camera *exynos_camera, int buffer_index, unsigned int *y, unsigned int *cbcr)
+{
+	int address = 0;
+
+	address = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_PADDR_Y, buffer_index);
+	if (address == 0 || address == (int) 0xffffffff) {
+		ALOGE("%s: Unable to get Y address", __func__);
+		if (y != NULL)
+			*y = 0;
+	} else {
+		if (y != NULL)
+			*y = (unsigned int) address;
+
+		if (cbcr != NULL) {
+			address = 0;
+			address = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_PADDR_CBCR, buffer_index);
+			if (address == 0 || address == (int) 0xffffffff) {
+				ALOGE("%s: Unable to get CbCr address", __func__);
+				*cbcr = 0;
+			} else
+				*cbcr = (unsigned int) address;
+		}
+	}
+
+	return 0;
 }
